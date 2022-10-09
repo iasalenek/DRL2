@@ -22,19 +22,28 @@ from world.my_rewards import (calc_distance_map,
                               calc_closeness, 
                               get_reward_1, 
                               compute_observation)
-                              
+
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--batch_size', type=int, default=16)
+parser.add_argument('--device', type=str, default='cpu')
+parser.add_argument('--eval_every', type=int, default=1000)
+parser.add_argument('--transitions', type=int, default=10000)
+parser.add_argument('--episodes', type=int, default=5)
+
+args = parser.parse_args()                       
 
 GAMMA = 0.99
 INITIAL_STEPS = 1024
-TRANSITIONS = 10000
+TRANSITIONS = args.transitions
 STEPS_PER_UPDATE = 4
 STEPS_PER_TARGET_UPDATE = STEPS_PER_UPDATE * 1000
-BATCH_SIZE = 16
+BATCH_SIZE = args.batch_size
 LEARNING_RATE = 5e-4
 BUFFR_SIZE = 10000
-EVAL_EVERY = 100
-
-DEVICE = 'cpu'
+EVAL_EVERY = args.eval_every
+EPISODES = args.episodes
+DEVICE = args.device
 
 
 class DQN(ScriptedAgent):
@@ -233,7 +242,7 @@ if __name__ == "__main__":
             distance_map = calc_distance_map(state)
 
         if (i + 1) % (EVAL_EVERY) == 0:
-                rewards, eaten = evaluate_policy(dqn, 5)
+                rewards, eaten = evaluate_policy(dqn, EPISODES)
                 print(f"Step: {i+1}, Reward mean: {np.mean(rewards)}, Reward std: {np.std(rewards)}")
                 print(f"Step: {i+1}, Eaten mean: {np.mean(eaten)}, Eaten std: {np.std(eaten)}\n")
                 dqn.save()
