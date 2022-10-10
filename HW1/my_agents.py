@@ -30,11 +30,12 @@ parser.add_argument('--batch_size', type=int, default=16)
 parser.add_argument('--device', type=str, default='cpu')
 parser.add_argument('--eval_every', type=int, default=1000)
 parser.add_argument('--transitions', type=int, default=10000)
-parser.add_argument('--target_update', type=int, default=40)
+parser.add_argument('--target_update', type=int, default=200)
 parser.add_argument('--episodes', type=int, default=50)
 parser.add_argument('--step_per_update', type=int, default=4)
-parser.add_argument('--lr', type=float, default=0.0005)
+parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--num_predators', type=int, default=5)
+parser.add_argument('--epsilon', type=float, default=0.2)
 
 args = parser.parse_args()                       
 
@@ -50,6 +51,7 @@ EVAL_EVERY = args.eval_every
 EPISODES = args.episodes
 DEVICE = args.device
 NUM_PREDATORS = args.num_predators
+EPSILON = args.epsilon
 
 
 class DQN(ScriptedAgent):
@@ -214,7 +216,6 @@ if __name__ == "__main__":
         1
     ))
     dqn = DQN(num_predators=NUM_PREDATORS)
-    eps = 0.1
     state, info = env.reset()
     distance_map = calc_distance_map(state)
 
@@ -233,7 +234,7 @@ if __name__ == "__main__":
 
     for i in tqdm(range(TRANSITIONS)):
         #Epsilon-greedy policy
-        if random.random() < eps:
+        if random.random() < EPSILON:
             action = [np.random.randint(5) for i in range(NUM_PREDATORS)]
         else:
             action = dqn.get_actions(state)

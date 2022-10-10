@@ -13,11 +13,13 @@ from agent import Agent
 if __name__ == "__main__":
     # Task 1
     env = OnePlayerEnv(Realm(
-        MixedMapLoader((SingleTeamLabyrinthMapLoader(), SingleTeamRocksMapLoader())),
+        MixedMapLoader((SingleTeamLabyrinthMapLoader(), 
+        # SingleTeamRocksMapLoader()
+        )),
         1
     ))
     env = RenderedEnvWrapper(env)
-    agent = Agent(num_predators=3)
+    agent = Agent()
     for i in range(4):
         state, info = env.reset()
         agent.reset(state, 0)

@@ -6,7 +6,7 @@ DEVICE = 'cpu'
 
 class Agent():
 
-    def __init__(self, num_predators: int):
+    def __init__(self, num_predators: int=5):
         self.model = torch.load("agent.pkl", map_location='cpu')
         self.num_predators = num_predators
 
@@ -22,22 +22,11 @@ class Agent():
         pass
 
 
-# class FirstTryAgent(ScriptedAgent):
-#     def __init__(self, agent_pkl = None):
+# Test
+# num_predators = 5
+# obs = compute_observation(state, num_predators)
+# obs = np.expand_dims(obs, axis=0)
 
-#         self.model = torch.load(agent_pkl).to(DEVICE)
+# model(torch.Tensor(obs).to('cpu')).view(num_predators, 5)
 
-#     def get_actions(self, state, team = None):
-
-#         # Центрируем состояние для каждого агента
-#         states = []
-
-#         for i in range(num_predators):
-#             y, x = np.where((state[:, :, 0] == 0) * (state[:, :, 1] == i))
-#             states.append(np.roll(np.roll(state, 20 - y, axis=0), 20 - x, axis=1))
-
-#         obs = torch.Tensor(np.dstack(states)).to(DEVICE).permute(2, 0, 1)
-#         obs = obs.reshape(1, 10, 40, 40).to(DEVICE)
-#         actions = model(obs).view(5, 5).argmax(axis=1).cpu().detach().numpy()
-
-#         return list(actions)
+# action = model(torch.Tensor(obs).to('cpu')).view(num_predators, 5).argmax(axis = 1)
