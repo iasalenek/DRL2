@@ -171,7 +171,9 @@ class DQN(ScriptedAgent):
 def evaluate_policy(agent, episodes=5):
 
     env = OnePlayerEnv(Realm(
-        MixedMapLoader((SingleTeamLabyrinthMapLoader(), SingleTeamRocksMapLoader())),
+        MixedMapLoader((SingleTeamLabyrinthMapLoader(), 
+        # SingleTeamRocksMapLoader()
+        )),
         1
     ))
 
