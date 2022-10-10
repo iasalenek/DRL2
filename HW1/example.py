@@ -26,7 +26,6 @@ if __name__ == "__main__":
         done = False
         while not done:
             action = agent.get_actions(state, 0)
-            print(action)
             state, done, info = env.step(action)
         env.render(f"render/one_player_env/{i}")
 

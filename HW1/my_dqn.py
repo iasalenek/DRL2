@@ -75,22 +75,43 @@ class DQN(ScriptedAgent):
 
         # Torch model
         torch.manual_seed(0)
-        self.model = nn.Sequential(
-            nn.Conv2d(self.num_predators, 64, 3, 1, 1),
+        # self.model = nn.Sequential(
+        #     nn.Conv2d(self.num_predators, 64, 3, 1, 1),
+        #     nn.ReLU(),
+        #     nn.AvgPool2d(2),
+        #     nn.Conv2d(64, 64, 3, 1, 1),
+        #     nn.ReLU(),
+        #     nn.AvgPool2d(2),
+        #     nn.Conv2d(64, 64, 3, 1, 1),
+        #     nn.ReLU(),
+        #     nn.AvgPool2d(2),
+        #     nn.Flatten(),
+        #     nn.Linear(1600, 400),
+        #     nn.ReLU(),
+        #     nn.Linear(400, 100),
+        #     nn.ReLU(),
+        #     nn.Linear(100, 5 * self.num_predators)).requires_grad_(True).to(DEVICE)
+        model = nn.Sequential(
+            nn.Conv2d(5, 64, 3, 1, 1),
             nn.ReLU(),
-            nn.AvgPool2d(2),
+            nn.Conv2d(64, 64, 3, 2, 1),
+            nn.ReLU(),
             nn.Conv2d(64, 64, 3, 1, 1),
             nn.ReLU(),
-            nn.AvgPool2d(2),
             nn.Conv2d(64, 64, 3, 1, 1),
             nn.ReLU(),
-            nn.AvgPool2d(2),
+            nn.Conv2d(64, 64, 3, 2, 1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, 1, 1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, 2, 1),
+            nn.ReLU(),
             nn.Flatten(),
             nn.Linear(1600, 400),
             nn.ReLU(),
             nn.Linear(400, 100),
             nn.ReLU(),
-            nn.Linear(100, 5 * self.num_predators)).requires_grad_(True).to(DEVICE)
+            nn.Linear(100, 5 * 5)).requires_grad_(True).to(DEVICE)
 
         self.optimizer = Adam(self.model.parameters(), lr=LEARNING_RATE)
         self.target_model = copy.deepcopy(self.model).requires_grad_(False).to(DEVICE)
@@ -156,6 +177,9 @@ class DQN(ScriptedAgent):
         # print(Q_next)
         
         loss = F.mse_loss(Q, rewards[:, None] + GAMMA * Q_next)
+
+        print(loss)
+
         loss.backward()
 
         self.optimizer.step()

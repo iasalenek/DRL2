@@ -2,6 +2,9 @@ import numpy as np
 import torch
 from my_utils import compute_observation
 
+import matplotlib.pyplot as plt
+import time
+
 DEVICE = 'cpu'
 
 class Agent():
@@ -13,8 +16,14 @@ class Agent():
     def get_actions(self, state, info):
         obs = compute_observation(state, self.num_predators)
         obs = np.expand_dims(obs, axis=0)
+
         action = self.model(torch.Tensor(obs).to(DEVICE)).view(self.num_predators, 5).argmax(axis = 1)
-        return action.to(int).cpu().detach().tolist()
+
+        action = action.to(int).cpu().detach().tolist()
+        print(action)
+        # print(self.model(torch.Tensor(obs).to(DEVICE)))
+        # time.sleep(5)
+        return action
         #return [0, 0, 0, 0, 0]
 
     def reset(self, state, info):
@@ -23,6 +32,8 @@ class Agent():
 
 
 # Test
+
+
 # num_predators = 5
 # obs = compute_observation(state, num_predators)
 # obs = np.expand_dims(obs, axis=0)
