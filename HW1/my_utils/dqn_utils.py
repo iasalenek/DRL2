@@ -1,6 +1,7 @@
 import copy
 import numpy as np
 
+
 def compute_observation(state: np.ndarray, 
                         num_predators: int = 5,
                         team: int = 0):

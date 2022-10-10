@@ -7,7 +7,7 @@ from world.map_loaders.two_teams import TwoTeamLabyrinthMapLoader, TwoTeamRocksM
 from world.scripted_agents import ClosestTargetAgent
 
 
-from agent import Agent
+from single_agent import Agent
 
 
 if __name__ == "__main__":

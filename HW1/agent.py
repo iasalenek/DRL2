@@ -20,9 +20,9 @@ class Agent():
         action = self.model(torch.Tensor(obs).to(DEVICE)).view(self.num_predators, 5).argmax(axis = 1)
 
         action = action.to(int).cpu().detach().tolist()
-        #print(action)
-        print(self.model(torch.Tensor(obs).to(DEVICE)))
-        time.sleep(5)
+        print(action)
+        #print(self.model(torch.Tensor(obs).to(DEVICE)))
+        #time.sleep(5)
         return action
         #return [0, 0, 0, 0, 0]
 
