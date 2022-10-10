@@ -28,6 +28,7 @@ from my_utils import (calc_distance_map,
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--batch_size', type=int, default=16)
+parser.add_argument('--initial_steps', type=int, default=1024)
 parser.add_argument('--device', type=str, default='cpu')
 parser.add_argument('--eval_every', type=int, default=1000)
 parser.add_argument('--transitions', type=int, default=10000)
@@ -41,8 +42,8 @@ parser.add_argument('--epsilon', type=float, default=0.2)
 args = parser.parse_args()                       
 
 GAMMA = 0.99
-INITIAL_STEPS = 1024
 BUFFR_SIZE = 10000
+INITIAL_STEPS = args.initial_steps
 TRANSITIONS = args.transitions
 STEPS_PER_UPDATE = args.step_per_update
 STEPS_PER_TARGET_UPDATE = args.target_update
@@ -55,6 +56,7 @@ NUM_PREDATORS = args.num_predators
 EPSILON = args.epsilon
 
 print(f'BATCH_SIZE: {BATCH_SIZE}')
+print(f'INITIAL_STEPS: {INITIAL_STEPS}')
 print(f'LEARNING_RATE: {LEARNING_RATE}')
 print(f'DEVICE: {DEVICE}')
 print(f'EPSILON: {EPSILON}')
@@ -168,8 +170,6 @@ class DQN(ScriptedAgent):
         obs = compute_observation(state, self.num_predators)
         obs = np.expand_dims(obs, axis=0)
         action = self.model(torch.Tensor(obs).to(DEVICE)).view(self.num_predators, 5).argmax(axis = 1)
-
-        print(action)
 
         return action.to(int).cpu().detach().tolist()
 
