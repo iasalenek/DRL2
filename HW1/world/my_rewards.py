@@ -92,6 +92,7 @@ def get_reward_1(env,
     #no_movement_penalty = -np.sum(next_state[state[:, :, 0] == 0][:, 0] == 0) * 10
 
     for i in range(k):
+        next_state, done, info = copy.deepcopy(env).step(action)
         if not done:
             next_values.append(
                 10 * len(info['eaten']) + calc_closeness(next_state, distance_map, num_predators))

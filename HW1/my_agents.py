@@ -101,6 +101,9 @@ class DQN(ScriptedAgent):
 
             # Считаем наблюдения из состояний
             obs = compute_observation(state, self.num_predators)
+
+            #print(obs[:, 20, 20])
+
             next_obs = compute_observation(next_state, self.num_predators)
 
             # Считаем награду
@@ -203,8 +206,8 @@ def evaluate_policy(agent, episodes=5):
 
 if __name__ == "__main__":
     env = OnePlayerEnv(Realm(
-        MixedMapLoader((SingleTeamLabyrinthMapLoader(), 
-        #SingleTeamRocksMapLoader()
+        MixedMapLoader((SingleTeamLabyrinthMapLoader(),
+        # SingleTeamRocksMapLoader()
         )),
         1
     ))
