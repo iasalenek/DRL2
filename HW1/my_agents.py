@@ -53,6 +53,14 @@ DEVICE = args.device
 NUM_PREDATORS = args.num_predators
 EPSILON = args.epsilon
 
+print(f'BATCH_SIZE: {BATCH_SIZE}')
+print(f'LEARNING_RATE: {LEARNING_RATE}')
+print(f'DEVICE: {DEVICE}')
+print(f'EPSILON: {EPSILON}')
+print(f'STEPS_PER_UPDATE: {STEPS_PER_UPDATE}')
+print(f'STEPS_PER_TARGET_UPDATE: {STEPS_PER_TARGET_UPDATE}')
+print(f'NUM_PREDATORS: {NUM_PREDATORS}')
+
 
 class DQN(ScriptedAgent):
 
@@ -251,6 +259,6 @@ if __name__ == "__main__":
 
         if (i + 1) % (EVAL_EVERY) == 0:
                 rewards, eaten = evaluate_policy(dqn, EPISODES)
-                print(f"Step: {i+1}, Reward mean: {np.mean(rewards)}, Reward std: {np.std(rewards)}")
+                print(f"\n Step: {i+1}, Reward mean: {np.mean(rewards)}, Reward std: {np.std(rewards)}")
                 print(f"Step: {i+1}, Eaten mean: {np.mean(eaten)}, Eaten std: {np.std(eaten)}\n")
                 dqn.save()
