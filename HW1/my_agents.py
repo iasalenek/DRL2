@@ -12,6 +12,7 @@ import random
 import numpy as np
 import copy
 from collections import deque
+from tqdm import tqdm
 
 import torch
 from torch import nn
@@ -29,64 +30,63 @@ parser.add_argument('--batch_size', type=int, default=16)
 parser.add_argument('--device', type=str, default='cpu')
 parser.add_argument('--eval_every', type=int, default=1000)
 parser.add_argument('--transitions', type=int, default=10000)
-parser.add_argument('--episodes', type=int, default=5)
+parser.add_argument('--target_update', type=int, default=40)
+parser.add_argument('--episodes', type=int, default=50)
+parser.add_argument('--step_per_update', type=int, default=4)
+parser.add_argument('--lr', type=float, default=0.0005)
+parser.add_argument('--num_predators', type=int, default=5)
 
 args = parser.parse_args()                       
 
 GAMMA = 0.99
 INITIAL_STEPS = 1024
-TRANSITIONS = args.transitions
-STEPS_PER_UPDATE = 4
-STEPS_PER_TARGET_UPDATE = STEPS_PER_UPDATE * 1000
-BATCH_SIZE = args.batch_size
-LEARNING_RATE = 5e-4
 BUFFR_SIZE = 10000
+TRANSITIONS = args.transitions
+STEPS_PER_UPDATE = args.step_per_update
+STEPS_PER_TARGET_UPDATE = args.target_update
+BATCH_SIZE = args.batch_size
+LEARNING_RATE = args.lr
 EVAL_EVERY = args.eval_every
 EPISODES = args.episodes
 DEVICE = args.device
+NUM_PREDATORS = args.num_predators
 
 
 class DQN(ScriptedAgent):
 
-    def __init__(self):
+    def __init__(self, 
+        num_predators: int = 5):
         
         self.steps = 0
-        self.distance_map = None
+        self.num_predators = NUM_PREDATORS
 
         # Torch model
         torch.manual_seed(0)
         self.model = nn.Sequential(
-            nn.Conv2d(5, 64, 3, 1, 1),
+            nn.Conv2d(self.num_predators, 64, 3, 1, 1),
             nn.ReLU(),
-            nn.MaxPool2d(2),
+            nn.AvgPool2d(2),
             nn.Conv2d(64, 64, 3, 1, 1),
             nn.ReLU(),
-            nn.MaxPool2d(2),
+            nn.AvgPool2d(2),
             nn.Conv2d(64, 64, 3, 1, 1),
             nn.ReLU(),
-            nn.MaxPool2d(2),
+            nn.AvgPool2d(2),
             nn.Flatten(),
             nn.Linear(1600, 400),
             nn.ReLU(),
             nn.Linear(400, 100),
             nn.ReLU(),
-            nn.Linear(100, 25)).requires_grad_(True).to(DEVICE)
+            nn.Linear(100, 5 * self.num_predators)).requires_grad_(True).to(DEVICE)
 
         self.optimizer = Adam(self.model.parameters(), lr=LEARNING_RATE)
-        self.target_model = copy.deepcopy(self.model).requires_grad_(False)
-        self.seed = random.seed(0)
+        self.target_model = copy.deepcopy(self.model).requires_grad_(False).to(DEVICE)
         self.buffer = deque(maxlen=BUFFR_SIZE)
 
     def consume_transition(self, transition):
-        # Add transition to a replay buffer.
-        # Hint: use deque with specified maxlen. It will remove old experience automatically.
         self.buffer.append(transition)
 
     def sample_batch(self):
-        # Sample batch from a replay buffer.
-        # Hints:
-        # 1. Use random.randint
-        # 2. Turn your batch into a numpy.array before turning it to a Tensor. It will work faster
         sample = random.sample(dqn.buffer, BATCH_SIZE)
         
         observations = []
@@ -100,12 +100,12 @@ class DQN(ScriptedAgent):
             state, distance_map, action, next_state, done, env = experience
 
             # Считаем наблюдения из состояний
-            obs = compute_observation(state)
-            next_obs = compute_observation(next_state)
+            obs = compute_observation(state, self.num_predators)
+            next_obs = compute_observation(next_state, self.num_predators)
 
             # Считаем награду
             if not done:
-                reward = get_reward_1(env, state, action, distance_map)
+                reward = get_reward_1(env, state, action, distance_map, self.num_predators)
             else:
                 reward = 0.0
                     
@@ -119,20 +119,20 @@ class DQN(ScriptedAgent):
             dones.append([done])
             rewards.append(reward)
         
-        return [torch.Tensor(np.array(i)) for i in [observations, actions, next_observations, rewards, dones]]
+        return [torch.Tensor(np.array(i)).to(DEVICE) for i in [observations, actions, next_observations, rewards, dones]]
 
 
     def train_step(self, batch):
         observations, actions, next_observations, rewards, dones = batch
 
-        ind_0 = np.repeat(np.arange(16)[:, None], 5, axis = 1)
-        ind_1 = np.repeat(np.arange(5)[None], 16, axis = 0)
+        ind_0 = np.repeat(np.arange(BATCH_SIZE)[:, None], self.num_predators, axis = 1)
+        ind_1 = np.repeat(np.arange(self.num_predators)[None], BATCH_SIZE, axis = 0)
         
         self.optimizer.zero_grad()
 
-        Q = self.model(observations).view(BATCH_SIZE, 5, 5)[ind_0, ind_1, actions.to(int)]
+        Q = self.model(observations).view(BATCH_SIZE, self.num_predators, 5)[ind_0, ind_1, actions.to(int)]
 
-        Q_next = torch.amax(self.target_model(next_observations).view(BATCH_SIZE, 5, 5), dim=2) * torch.logical_not(dones)
+        Q_next = torch.amax(self.target_model(next_observations).view(BATCH_SIZE, self.num_predators, 5), dim=2) * torch.logical_not(dones)
         
         loss = F.mse_loss(Q, rewards[:, None] + GAMMA * Q_next)
         loss.backward()
@@ -142,13 +142,13 @@ class DQN(ScriptedAgent):
     def update_target_network(self):
         # Update weights of a target Q-network here. You may use copy.deepcopy to do this or 
         # assign a values of network parameters via PyTorch methods.
-        self.target_model = copy.deepcopy(self.model).requires_grad_(False)
+        self.target_model = copy.deepcopy(self.model).requires_grad_(False).to(DEVICE)
     
     def get_actions(self, state, team=0):
         # Compute an action. Do not forget to turn state to a Tensor and then turn an action to a numpy array.
-        obs = compute_observation(state)
+        obs = compute_observation(state, self.num_predators)
         obs = np.expand_dims(obs, axis=0)
-        action = self.model(torch.Tensor(obs)).view(5, 5).argmax(axis = 1)
+        action = self.model(torch.Tensor(obs).to(DEVICE)).view(self.num_predators, 5).argmax(axis = 1)
         return action.to(int).cpu().detach().tolist()
 
     def update(self, transition):
@@ -185,7 +185,7 @@ def evaluate_policy(agent, episodes=5):
         
         while not done:
             action = agent.get_actions(state, team=0)
-            reward = get_reward_1(copy.deepcopy(env), state, action, distance_map)
+            reward = get_reward_1(copy.deepcopy(env), state, action, distance_map, NUM_PREDATORS)
             # Костыль на всякий случай
             if np.isnan(reward):
                 reward = 0.0
@@ -203,17 +203,19 @@ def evaluate_policy(agent, episodes=5):
 
 if __name__ == "__main__":
     env = OnePlayerEnv(Realm(
-        MixedMapLoader((SingleTeamLabyrinthMapLoader(), SingleTeamRocksMapLoader())),
+        MixedMapLoader((SingleTeamLabyrinthMapLoader(), 
+        #SingleTeamRocksMapLoader()
+        )),
         1
     ))
-    dqn = DQN()
+    dqn = DQN(num_predators=NUM_PREDATORS)
     eps = 0.1
     state, info = env.reset()
     distance_map = calc_distance_map(state)
 
     for _ in range(INITIAL_STEPS):
 
-        action = [np.random.randint(5) for i in range(5)]
+        action = [np.random.randint(5) for i in range(NUM_PREDATORS)]
         env_deepcopy = copy.deepcopy(env)
         next_state, done, info = env.step(action)
         dqn.consume_transition((state, distance_map, action, next_state, done, env_deepcopy))
@@ -224,10 +226,10 @@ if __name__ == "__main__":
             state, info = env.reset()
             distance_map = calc_distance_map(state)
 
-    for i in range(TRANSITIONS):
+    for i in tqdm(range(TRANSITIONS)):
         #Epsilon-greedy policy
         if random.random() < eps:
-            action = [np.random.randint(5) for i in range(5)]
+            action = [np.random.randint(5) for i in range(NUM_PREDATORS)]
         else:
             action = dqn.get_actions(state)
 

@@ -1,7 +1,21 @@
-class Agent:
+import numpy as np
+import torch
+from world.my_rewards import compute_observation
+
+DEVICE = 'cpu'
+
+class Agent():
+
+    def __init__(self, num_predators: int):
+        self.model = torch.load("agent.pkl", map_location='cpu')
+        self.num_predators = num_predators
+
     def get_actions(self, state, info):
-        # TODO: implement
-        return [0, 0, 0, 0, 0]
+        obs = compute_observation(state, self.num_predators)
+        obs = np.expand_dims(obs, axis=0)
+        action = self.model(torch.Tensor(obs).to(DEVICE)).view(self.num_predators, 5).argmax(axis = 1)
+        return action.to(int).cpu().detach().tolist()
+        #return [0, 0, 0, 0, 0]
 
     def reset(self, state, info):
         # TODO: implement

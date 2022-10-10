@@ -16,6 +16,7 @@ def compute_observation(state: np.ndarray,
     return obs
 
 def calc_distance_map(initial_state):
+    
     mask = np.zeros(initial_state.shape[:2], np.bool)
     mask[np.logical_or(np.logical_and(initial_state[:, :, 0] == -1, initial_state[:, :, 1] == 0),
                         initial_state[:, :, 0] >= 0)] = True
@@ -52,7 +53,7 @@ def calc_distance_map(initial_state):
 
 def calc_closeness(state: np.ndarray, 
                    distance_map: np.ndarray,
-                   num_predators: int = 5):
+                   num_predators: int):
 
     preys_team = np.max(state[:, :, 0])
     num_preys = np.sum(state[:, :, 0] == preys_team)
@@ -80,22 +81,24 @@ def get_reward_1(env,
                  state: np.ndarray, 
                  action: np.ndarray, 
                  distance_map: np.ndarray,
-                 num_predators: int = 5,
-                 k: int = 5):
+                 num_predators: int,
+                 k: int = 1):
     
-    cur_value = calc_closeness(state, distance_map)
+    cur_value = calc_closeness(state, distance_map, num_predators)
     next_values = []
 
+    # Штраф за отсутствие движения
+    #next_state, done, info = copy.deepcopy(env).step(action)
+    #no_movement_penalty = -np.sum(next_state[state[:, :, 0] == 0][:, 0] == 0) * 10
+
     for i in range(k):
-        next_state, done, info = copy.deepcopy(env).step(action)
-        no_movement_penalty = -np.sum(next_state[state[:, :, 0] == 0][:, 0] == 0) * 10
         if not done:
             next_values.append(
-                10 * len(info['eaten']) + calc_closeness(next_state, distance_map) + no_movement_penalty)
+                10 * len(info['eaten']) + calc_closeness(next_state, distance_map, num_predators))
         else:
             next_values.append(0)
 
     E_next_values = np.mean(next_values)
-    reward = E_next_values - cur_value
+    reward = (E_next_values - cur_value)
 
     return reward
