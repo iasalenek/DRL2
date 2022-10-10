@@ -91,7 +91,7 @@ class DQN(ScriptedAgent):
         #     nn.Linear(400, 100),
         #     nn.ReLU(),
         #     nn.Linear(100, 5 * self.num_predators)).requires_grad_(True).to(DEVICE)
-        model = nn.Sequential(
+        self.model = nn.Sequential(
             nn.Conv2d(5, 64, 3, 1, 1),
             nn.ReLU(),
             nn.Conv2d(64, 64, 3, 2, 1),
