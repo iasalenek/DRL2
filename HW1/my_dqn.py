@@ -173,13 +173,8 @@ class DQN(ScriptedAgent):
         Q = self.model(observations).view(BATCH_SIZE, self.num_predators, 5)[ind_0, ind_1, actions.to(int)]
 
         Q_next = torch.amax(self.target_model(next_observations).view(BATCH_SIZE, self.num_predators, 5), dim=2) * torch.logical_not(dones)
-
-        # print(Q_next)
         
         loss = F.mse_loss(Q, rewards[:, None] + GAMMA * Q_next)
-
-        print(loss)
-
         loss.backward()
 
         self.optimizer.step()
