@@ -1,5 +1,5 @@
-python my_agents.py \
---batch_size 8 \
---eval_every 5 \
+python my_dqn.py \
+--batch_size 16 \
+--eval_every 1000 \
 --episodes 5 \
---num_predators 3
+--num_predators 5

@@ -13,16 +13,17 @@ import numpy as np
 import copy
 from collections import deque
 from tqdm import tqdm
+import time
 
 import torch
 from torch import nn
 from torch.nn import functional as F
 from torch.optim import Adam
 
-from world.my_rewards import (calc_distance_map, 
-                              calc_closeness, 
-                              get_reward_1, 
-                              compute_observation)
+from my_utils import (calc_distance_map, 
+                      calc_closeness, 
+                      get_reward_1, 
+                      compute_observation)
 
 import argparse
 parser = argparse.ArgumentParser()
@@ -131,6 +132,9 @@ class DQN(ScriptedAgent):
             next_observations.append(next_obs)
             dones.append([done])
             rewards.append(reward)
+
+        # Нормировка наград
+        # rewards = (rewards - np.mean(reward)) / np.sqrt(np.var(rewards))
         
         return [torch.Tensor(np.array(i)).to(DEVICE) for i in [observations, actions, next_observations, rewards, dones]]
 
@@ -146,6 +150,8 @@ class DQN(ScriptedAgent):
         Q = self.model(observations).view(BATCH_SIZE, self.num_predators, 5)[ind_0, ind_1, actions.to(int)]
 
         Q_next = torch.amax(self.target_model(next_observations).view(BATCH_SIZE, self.num_predators, 5), dim=2) * torch.logical_not(dones)
+
+        # print(Q_next)
         
         loss = F.mse_loss(Q, rewards[:, None] + GAMMA * Q_next)
         loss.backward()
@@ -162,6 +168,9 @@ class DQN(ScriptedAgent):
         obs = compute_observation(state, self.num_predators)
         obs = np.expand_dims(obs, axis=0)
         action = self.model(torch.Tensor(obs).to(DEVICE)).view(self.num_predators, 5).argmax(axis = 1)
+
+        print(action)
+
         return action.to(int).cpu().detach().tolist()
 
     def update(self, transition):

@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from world.my_rewards import compute_observation
+from my_utils import compute_observation
 
 DEVICE = 'cpu'
 

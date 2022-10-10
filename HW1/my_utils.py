@@ -6,12 +6,17 @@ def compute_observation(state: np.ndarray,
                         team: int = 0):
 
     states = []
+    state[(state[:, :, 1] == -1)] = [-2, -1]
 
     for i in range(num_predators):
         y, x = np.where((state[:, :, 0] == team) * (state[:, :, 1] == i))
         states.append(np.roll(np.roll(state[:, :, 0:1], 20 - y, axis=0), 20 - x, axis=1))
 
     obs = np.transpose(np.dstack(states), (2, 0, 1))
+
+    # import matplotlib.pyplot as plt
+    # plt.imshow(obs[0])
+    # plt.show()
 
     return obs
 
