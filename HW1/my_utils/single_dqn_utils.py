@@ -5,16 +5,25 @@ from my_utils.common_utils import calc_distance_map
 
 def compute_observation_single(state: np.ndarray,
                                id: int,
+                               distance_map: np.ndarray,
                                team: int = 0):
 
     y, x = np.where((state[:, :, 0] == team) * (state[:, :, 1] == id))
     state_centred = np.roll(np.roll(state, 20 - y, axis=0), 20 - x, axis=1)
 
-    # Здесь команда агента равна 0
-    obs = np.zeros((40, 40, 3), dtype=int)
+    obs = np.zeros((40, 40, 4), dtype=int)
+
+    #Наблюдения из state
+
     obs[:, :, 0][state_centred[:, :, 1] == -1] = 1 # Препятствия
     obs[:, :, 1][state_centred[:, :, 0] == 1] = 1  # Жертвы
     obs[:, :, 2][state_centred[:, :, 0] == 0] = 1  # Хищники
+
+    # Distance map для агента
+
+    for y1 in range(40):
+        for x1 in range(40):
+            obs[y1, x1, 3] = distance_map[y * 40 + x, y1 * 40 + x1]
 
     obs = np.transpose(obs, (2, 0, 1))
     

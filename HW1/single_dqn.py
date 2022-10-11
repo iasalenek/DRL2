@@ -82,26 +82,26 @@ class singe_DQN(ScriptedAgent):
         if NET == 'conv':
 
             self.model = nn.Sequential(
-                nn.Conv2d(3, 64, 3, 1, 1),
+                nn.Conv2d(4, 32, 3, 1, 1),
                 nn.ReLU(),
-                nn.Conv2d(64, 64, 3, 2, 1),
+                nn.Conv2d(32, 32, 3, 2, 1),
                 nn.ReLU(),
-                nn.Conv2d(64, 64, 3, 1, 1),
+                nn.Conv2d(32, 32, 3, 1, 1),
                 nn.ReLU(),
-                nn.Conv2d(64, 64, 3, 1, 1),
+                nn.Conv2d(32, 32, 3, 1, 1),
                 nn.ReLU(),
-                nn.Conv2d(64, 64, 3, 2, 1),
+                nn.Conv2d(32, 32, 3, 2, 1),
                 nn.ReLU(),
-                nn.Conv2d(64, 64, 3, 1, 1),
+                nn.Conv2d(32, 32, 3, 1, 1),
                 nn.ReLU(),
-                nn.Conv2d(64, 64, 3, 2, 1),
+                nn.Conv2d(32, 32, 3, 2, 1),
                 nn.ReLU(),
                 nn.Flatten(),
-                nn.Linear(1600, 400),
+                nn.Linear(800, 200),
                 nn.ReLU(),
-                nn.Linear(400, 100),
+                nn.Linear(200, 50),
                 nn.ReLU(),
-                nn.Linear(100, 5)).requires_grad_(True).to(DEVICE)
+                nn.Linear(50, 5)).requires_grad_(True).to(DEVICE)
 
         if NET == 'linear':
 
@@ -141,8 +141,8 @@ class singe_DQN(ScriptedAgent):
             action_id = action[agent_id]
 
             # Считаем наблюдения из состояний
-            obs = compute_observation_single(state, id=agent_id)
-            next_obs = compute_observation_single(next_state, id=agent_id)
+            obs = compute_observation_single(state, agent_id, distance_map)
+            next_obs = compute_observation_single(next_state, agent_id, distance_map)
 
             # Считаем награду
             reward = reward_func(state, action, next_state, info, distance_map)
@@ -176,11 +176,11 @@ class singe_DQN(ScriptedAgent):
         # assign a values of network parameters via PyTorch methods.
         self.target_model = copy.deepcopy(self.model).requires_grad_(False).to(DEVICE)
     
-    def get_actions(self, state, team=0):
+    def get_actions(self, state, distance_map, team=0):
         
         observations = []
         for i in range(5):
-            obs = compute_observation_single(state, id=i)
+            obs = compute_observation_single(state, i, distance_map)
             observations.append(obs)
 
         observations = np.array(observations)
@@ -224,7 +224,7 @@ def evaluate_policy(agent, episodes=5):
         distance_map = calc_distance_map(state)
         
         while not done:
-            action = agent.get_actions(state, team=0)
+            action = agent.get_actions(state, distance_map, team=0)
             next_state, done, info = env.step(action)
             reward = reward_func(state, action, next_state, info, distance_map)
             
@@ -265,7 +265,7 @@ if __name__ == "__main__":
         if random.random() < EPSILON:
             action = [np.random.randint(5) for i in range(NUM_PREDATORS)]
         else:
-            action = dqn.get_actions(state)
+            action = dqn.get_actions(state, distance_map)
 
         next_state, done, info = env.step(action)
         dqn.update((state, action, next_state, done, distance_map,info))
