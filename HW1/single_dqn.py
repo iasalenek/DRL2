@@ -82,14 +82,19 @@ class singe_DQN(ScriptedAgent):
 
             self.model = nn.Sequential(
                 nn.Conv2d(4, 32, 3, 1, 1),
-                nn.Dropout2d(0.2),
-                nn.BatchNorm2d(32),
                 nn.ReLU(),
+                nn.Conv2d(32, 32, 3, 1, 1),
+                nn.ReLU(),
+                nn.Dropout2d(0.2),
+                nn.AvgPool2d(2),
+                nn.Conv2d(32, 64, 3, 1, 1),
+                nn.ReLU(),
+                nn.Conv2d(64, 64, 3, 1, 1),
+                nn.ReLU(),
+                nn.Dropout2d(0.2),
                 nn.AvgPool2d(2),
                 nn.Flatten(),
-                nn.Linear(12800, 1600),
-                nn.ReLU(),
-                nn.Linear(1600, 5)).requires_grad_(True).to(DEVICE)
+                nn.Linear(6400, 5)).requires_grad_(True).to(DEVICE)
 
 
             # self.model = nn.Sequential(
