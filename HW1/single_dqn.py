@@ -6,7 +6,6 @@ from world.map_loaders.single_team import SingleTeamLabyrinthMapLoader, SingleTe
 from world.map_loaders.two_teams import TwoTeamLabyrinthMapLoader, TwoTeamRocksMapLoader
 from world.scripted_agents import ScriptedAgent
 
-
 import abc
 import random
 import numpy as np
@@ -21,80 +20,101 @@ from torch.nn import functional as F
 from torch.optim import Adam
 
 from my_utils.common_utils import calc_distance_map
-from my_utils.single_dqn_utils import (calc_closeness,
-                                       get_reward_single, 
-                                       compute_observation_single)
+from my_utils.single_dqn_utils import (get_reward_single, 
+                                       compute_observation_single,
+                                       closest_n_reward)
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--batch_size', type=int, default=16)
-parser.add_argument('--initial_steps', type=int, default=1024)
-parser.add_argument('--device', type=str, default='cpu')
-parser.add_argument('--eval_every', type=int, default=1000)
-parser.add_argument('--transitions', type=int, default=10000)
-parser.add_argument('--target_update', type=int, default=500)
-parser.add_argument('--episodes', type=int, default=5)
-parser.add_argument('--step_per_update', type=int, default=4)
+parser.add_argument('--batch_size', type=int, default=128)
 parser.add_argument('--lr', type=float, default=0.001)
+parser.add_argument('--device', type=str, default='cpu')
+parser.add_argument('--net', type=str, default='conv')
+parser.add_argument('--transitions', type=int, default=50000)
+parser.add_argument('--buffer_size', type=int, default=100000)
+parser.add_argument('--initial_steps', type=int, default=10000)
+parser.add_argument('--step_per_update', type=int, default=4)
+parser.add_argument('--target_update', type=int, default=500)
 parser.add_argument('--num_predators', type=int, default=5)
-parser.add_argument('--epsilon', type=float, default=0.2)
-parser.add_argument('--buffer_size', type=int, default=10000)
+parser.add_argument('--epsilon', type=float, default=0.3)
+parser.add_argument('--eval_every', type=int, default=1000)
+parser.add_argument('--episodes', type=int, default=5)
 
 args = parser.parse_args()                       
 
 GAMMA = 0.99
 BATCH_SIZE = args.batch_size
+LEARNING_RATE = args.lr
+DEVICE = args.device
+NET = args.net
+TRANSITIONS = args.transitions
 BUFFR_SIZE = args.buffer_size
 INITIAL_STEPS = args.initial_steps
-TRANSITIONS = args.transitions
 STEPS_PER_UPDATE = args.step_per_update
 STEPS_PER_TARGET_UPDATE = args.target_update
-LEARNING_RATE = args.lr
-EVAL_EVERY = args.eval_every
-EPISODES = args.episodes
-DEVICE = args.device
 NUM_PREDATORS = args.num_predators
 EPSILON = args.epsilon
+EVAL_EVERY = args.eval_every
+EPISODES = args.episodes
 
 print(f'BATCH_SIZE: {BATCH_SIZE}')
-print(f'INITIAL_STEPS: {INITIAL_STEPS}')
 print(f'LEARNING_RATE: {LEARNING_RATE}')
 print(f'DEVICE: {DEVICE}')
-print(f'EPSILON: {EPSILON}')
+print(f'NET: {NET}')
+print(f'TRANSITIONS: {TRANSITIONS}')
+print(f'BUFFR_SIZE: {BUFFR_SIZE}')
+print(f'INITIAL_STEPS: {INITIAL_STEPS}')
 print(f'STEPS_PER_UPDATE: {STEPS_PER_UPDATE}')
 print(f'STEPS_PER_TARGET_UPDATE: {STEPS_PER_TARGET_UPDATE}')
 print(f'NUM_PREDATORS: {NUM_PREDATORS}')
+print(f'EPSILON: {EPSILON}')
+print(f'EVAL_EVERY: {EVAL_EVERY}')
+print(f'EPISODES: {EPISODES}')
 
+reward_func = closest_n_reward
 
 class singe_DQN(ScriptedAgent):
 
     def __init__(self):
         
         self.steps = 0
-        self.id = id
 
-        # Torch model
-        self.model = nn.Sequential(
-            nn.Conv2d(3, 64, 3, 1, 1),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, 3, 2, 1),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, 3, 1, 1),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, 3, 1, 1),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, 3, 2, 1),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, 3, 1, 1),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, 3, 2, 1),
-            nn.ReLU(),
-            nn.Flatten(),
-            nn.Linear(1600, 400),
-            nn.ReLU(),
-            nn.Linear(400, 100),
-            nn.ReLU(),
-            nn.Linear(100, 5)).requires_grad_(True).to(DEVICE)
+        if NET == 'conv':
+
+            self.model = nn.Sequential(
+                nn.Conv2d(3, 64, 3, 1, 1),
+                nn.ReLU(),
+                nn.Conv2d(64, 64, 3, 2, 1),
+                nn.ReLU(),
+                nn.Conv2d(64, 64, 3, 1, 1),
+                nn.ReLU(),
+                nn.Conv2d(64, 64, 3, 1, 1),
+                nn.ReLU(),
+                nn.Conv2d(64, 64, 3, 2, 1),
+                nn.ReLU(),
+                nn.Conv2d(64, 64, 3, 1, 1),
+                nn.ReLU(),
+                nn.Conv2d(64, 64, 3, 2, 1),
+                nn.ReLU(),
+                nn.Flatten(),
+                nn.Linear(1600, 400),
+                nn.ReLU(),
+                nn.Linear(400, 100),
+                nn.ReLU(),
+                nn.Linear(100, 5)).requires_grad_(True).to(DEVICE)
+
+        if NET == 'linear':
+
+            self.model = nn.Sequential(
+                nn.Flatten(),
+                nn.Linear(4800, 1200),
+                nn.ReLU(),
+                nn.Linear(1200, 200),
+                nn.ReLU(),
+                nn.Linear(200, 50),
+                nn.ReLU(),
+                nn.Linear(50, 5),
+            ).requires_grad_(True).to(DEVICE)
 
         self.optimizer = Adam(self.model.parameters(), lr=LEARNING_RATE)
         self.target_model = copy.deepcopy(self.model).requires_grad_(False).to(DEVICE)
@@ -125,7 +145,7 @@ class singe_DQN(ScriptedAgent):
             next_obs = compute_observation_single(next_state, id=agent_id)
 
             # Считаем награду
-            reward = get_reward_single(env, state, action, distance_map)
+            reward = reward_func(env, state, action, distance_map)
             
             observations.append(obs)
             actions.append(action_id)
@@ -143,7 +163,7 @@ class singe_DQN(ScriptedAgent):
         self.optimizer.zero_grad()
 
         Q = self.model(observations)[torch.arange(BATCH_SIZE), actions.to(int)][:, None]
-        
+
         Q_next = torch.amax(self.target_model(next_observations), dim=1, keepdim=True) * torch.logical_not(dones)
 
         loss = F.mse_loss(Q, rewards + GAMMA * Q_next)
@@ -205,7 +225,7 @@ def evaluate_policy(agent, episodes=5):
         
         while not done:
             action = agent.get_actions(state, team=0)
-            reward = get_reward_single(copy.deepcopy(env), state, action, distance_map)
+            reward = reward_func(copy.deepcopy(env), state, action, distance_map)
 
             next_state, done, info = env.step(action)
             
