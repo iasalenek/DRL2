@@ -31,7 +31,7 @@ parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--device', type=str, default='cpu')
 parser.add_argument('--net', type=str, default='conv')
 parser.add_argument('--transitions', type=int, default=50000)
-parser.add_argument('--buffer_size', type=int, default=100000)
+parser.add_argument('--buffer_size', type=int, default=10000)
 parser.add_argument('--initial_steps', type=int, default=10000)
 parser.add_argument('--step_per_update', type=int, default=4)
 parser.add_argument('--target_update', type=int, default=500)
@@ -134,7 +134,7 @@ class singe_DQN(ScriptedAgent):
 
         for experience in sample:
 
-            state, distance_map, action, next_state, done, env = experience
+            state, action, next_state, done, distance_map,info = experience
 
             # Оставляем только действие одного агента
             agent_id = np.random.randint(5)
@@ -145,7 +145,7 @@ class singe_DQN(ScriptedAgent):
             next_obs = compute_observation_single(next_state, id=agent_id)
 
             # Считаем награду
-            reward = reward_func(env, state, action, distance_map)
+            reward = reward_func(state, action, next_state, info, distance_map)
             
             observations.append(obs)
             actions.append(action_id)
@@ -225,9 +225,8 @@ def evaluate_policy(agent, episodes=5):
         
         while not done:
             action = agent.get_actions(state, team=0)
-            reward = reward_func(copy.deepcopy(env), state, action, distance_map)
-
             next_state, done, info = env.step(action)
+            reward = reward_func(state, action, next_state, info, distance_map)
             
             total_reward += reward
             total_eaten += len(info['eaten'])
@@ -252,9 +251,8 @@ if __name__ == "__main__":
     for _ in range(INITIAL_STEPS):
 
         action = [np.random.randint(5) for i in range(5)]
-        env_deepcopy = copy.deepcopy(env)
         next_state, done, info = env.step(action)
-        dqn.consume_transition((state, distance_map, action, next_state, done, env_deepcopy))
+        dqn.consume_transition((state, action, next_state, done, distance_map,info))
         
         if not done:
             state = next_state 
@@ -269,9 +267,8 @@ if __name__ == "__main__":
         else:
             action = dqn.get_actions(state)
 
-        env_deepcopy = copy.deepcopy(env)
         next_state, done, info = env.step(action)
-        dqn.update((state, distance_map, action, next_state, done, env_deepcopy))
+        dqn.update((state, action, next_state, done, distance_map,info))
         
         if not done:
             state = next_state 

@@ -104,11 +104,12 @@ def calc_closeness_id(state: np.ndarray,
 
 
 
-def closest_n_reward(env,
-                     state: np.ndarray, 
+def closest_n_reward(state: np.ndarray,
                      action: np.ndarray, 
+                     next_state: np.array,
+                     info,
                      distance_map: np.ndarray,
-                     k: int = 1, n: int = 5):
+                     n: int = 5):
 
     # Все 100 жертв
     all_ids = np.arange(100)
@@ -125,24 +126,14 @@ def closest_n_reward(env,
     cur_value = -np.mean(dist_n)
 
     # Считаем матожидание следущих состояний
-    next_values = []
+    next_dist_n = calc_closeness_id(next_state, distance_map, ids_n)
+    next_dist_n = next_dist_n[next_dist_n < 1600]
+    next_value = -np.mean(next_dist_n)
 
-    for i in range(k):
-        next_state, done, info = copy.deepcopy(env).step(action)
-        
-        if not done:
-            next_dist_n = calc_closeness_id(next_state, distance_map, ids_n)
-            next_dist_n = next_dist_n[next_dist_n < 1600]
-            next_values.append(10 * len(info['eaten']) - np.mean(next_dist_n))
-        else:
-            next_values.append(10 * len(info['eaten']))
-
-    E_next_value = np.mean(next_values)
-
-    reward = E_next_value - cur_value
+    reward = next_value - cur_value + 10 * len(info['eaten'])
 
     ####
-    print(reward)
+    # print(reward)
     ####
 
     return reward
