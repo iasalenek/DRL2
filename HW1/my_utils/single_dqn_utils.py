@@ -95,9 +95,11 @@ def closest_n_reward(state: np.ndarray,
 
     reward = next_value - cur_value + 10 * len(info['eaten'])
 
-    ####
+    ###
+    # import time
     # print(reward)
-    ####
+    # time.sleep(0.1)
+    ###
 
     return reward
 

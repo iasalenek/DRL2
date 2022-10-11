@@ -47,6 +47,6 @@ def calc_distance_mat(distance_map: np.ndarray, y: int, x: int, c: int = 100):
     xy1 = x1 * 40 + y1
 
     distance_mat = distance_map[xy0, xy1]
-    distance_mat[distance_mat > 1600] = 100
+    # distance_mat[distance_mat > 1600] = 100
     
     return distance_mat.T

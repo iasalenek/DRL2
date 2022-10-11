@@ -82,25 +82,37 @@ class singe_DQN(ScriptedAgent):
 
             self.model = nn.Sequential(
                 nn.Conv2d(4, 32, 3, 1, 1),
+                nn.Dropout2d(0.2),
+                nn.BatchNorm2d(32),
                 nn.ReLU(),
-                nn.Conv2d(32, 32, 3, 2, 1),
-                nn.ReLU(),
-                nn.Conv2d(32, 32, 3, 1, 1),
-                nn.ReLU(),
-                nn.Conv2d(32, 32, 3, 1, 1),
-                nn.ReLU(),
-                nn.Conv2d(32, 32, 3, 2, 1),
-                nn.ReLU(),
-                nn.Conv2d(32, 32, 3, 1, 1),
-                nn.ReLU(),
-                nn.Conv2d(32, 32, 3, 2, 1),
-                nn.ReLU(),
+                nn.AvgPool2d(2),
                 nn.Flatten(),
-                nn.Linear(800, 200),
+                nn.Linear(12800, 1600),
                 nn.ReLU(),
-                nn.Linear(200, 50),
-                nn.ReLU(),
-                nn.Linear(50, 5)).requires_grad_(True).to(DEVICE)
+                nn.Linear(1600, 5)).requires_grad_(True).to(DEVICE)
+
+
+            # self.model = nn.Sequential(
+            #     nn.Conv2d(4, 32, 3, 1, 1),
+            #     nn.ReLU(),
+            #     nn.Conv2d(32, 32, 3, 2, 1),
+            #     nn.ReLU(),
+            #     nn.Conv2d(32, 32, 3, 1, 1),
+            #     nn.ReLU(),
+            #     nn.Conv2d(32, 32, 3, 1, 1),
+            #     nn.ReLU(),
+            #     nn.Conv2d(32, 32, 3, 2, 1),
+            #     nn.ReLU(),
+            #     nn.Conv2d(32, 32, 3, 1, 1),
+            #     nn.ReLU(),
+            #     nn.Conv2d(32, 32, 3, 2, 1),
+            #     nn.ReLU(),
+            #     nn.Flatten(),
+            #     nn.Linear(800, 200),
+            #     nn.ReLU(),
+            #     nn.Linear(200, 50),
+            #     nn.ReLU(),
+            #     nn.Linear(50, 5)).requires_grad_(True).to(DEVICE)
 
         if NET == 'linear':
 
@@ -204,6 +216,7 @@ class singe_DQN(ScriptedAgent):
 
 def evaluate_policy(agent, episodes=5):
 
+    agent.model.eval()
     env = OnePlayerEnv(Realm(
         MixedMapLoader((SingleTeamLabyrinthMapLoader(), 
         # SingleTeamRocksMapLoader()
@@ -232,6 +245,8 @@ def evaluate_policy(agent, episodes=5):
 
         returns.append(total_reward)
         eaten.append(total_eaten)
+
+    agent.model.train()
         
     return returns, eaten
 
