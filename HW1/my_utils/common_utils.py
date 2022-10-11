@@ -36,3 +36,17 @@ def calc_distance_map(initial_state):
         updated = (old_distances != distance_map).sum() > 0
 
     return distance_map
+
+
+def calc_distance_mat(distance_map: np.ndarray, y: int, x: int, c: int = 100):
+
+    x0, y0 = np.meshgrid([y] * 40, [x] * 40)
+    xy0 = x0 * 40 + y0
+
+    x1, y1 = np.meshgrid(np.arange(40), np.arange(40))
+    xy1 = x1 * 40 + y1
+
+    distance_mat = distance_map[xy0, xy1]
+    distance_mat[distance_mat > 1600] = 100
+    
+    return distance_mat.T

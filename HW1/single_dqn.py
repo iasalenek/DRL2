@@ -20,8 +20,7 @@ from torch.nn import functional as F
 from torch.optim import Adam
 
 from my_utils.common_utils import calc_distance_map
-from my_utils.single_dqn_utils import (get_reward_single, 
-                                       compute_observation_single,
+from my_utils.single_dqn_utils import (compute_observation_single,
                                        closest_n_reward)
 
 import argparse
@@ -134,7 +133,7 @@ class singe_DQN(ScriptedAgent):
 
         for experience in sample:
 
-            state, action, next_state, done, distance_map,info = experience
+            state, action, next_state, done, distance_map, info = experience
 
             # Оставляем только действие одного агента
             agent_id = np.random.randint(5)

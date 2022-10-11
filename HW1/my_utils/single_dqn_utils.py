@@ -1,6 +1,6 @@
 import copy
 import numpy as np
-from my_utils.common_utils import calc_distance_map
+from my_utils.common_utils import calc_distance_map, calc_distance_mat
 
 
 def compute_observation_single(state: np.ndarray,
@@ -20,70 +20,24 @@ def compute_observation_single(state: np.ndarray,
     obs[:, :, 2][state_centred[:, :, 0] == 0] = 1  # Хищники
 
     # Distance map для агента
-
-    for y1 in range(40):
-        for x1 in range(40):
-            obs[y1, x1, 3] = distance_map[y * 40 + x, y1 * 40 + x1]
-
+    distance_map = calc_distance_mat(distance_map, y, x)
+    obs[:, :, 3] = np.roll(np.roll(distance_map, 20 - y, axis=0), 20 - x, axis=1)
+    
+    #Транспонируем наблюдения для сети
     obs = np.transpose(obs, (2, 0, 1))
+
+    ####
+    # import matplotlib.pyplot as plt
+    # import time
+    # plt.imshow(obs[3, :, :])
+    # plt.show()
+    # print(np.min(obs[3, :, :]))
+    # plt.imshow(obs[2, :, :])
+    # plt.show()
+    # time.sleep(0)
+    ####
     
     return obs
-
-
-def calc_closeness(state: np.ndarray, 
-                   distance_map: np.ndarray):
-
-    preys_team = np.max(state[:, :, 0])
-    num_preys = np.sum(state[:, :, 0] == preys_team)
-    preys_ind = np.where(state[:, :, 0] == preys_team)
-
-    preys_dist = np.ones(num_preys) * 1601
-
-    for i in range(5):
-
-        y, x = np.where((state[:, :, 0] == 0) * (state[:, :, 1] == i))
-        y, x = int(x), int(y)
-
-        for j in range(num_preys):
-            y1, x1 = preys_ind[0][j], preys_ind[1][j]
-
-            dist = distance_map[x * 40 + y, x1 * 40 + y1]
-
-            if dist < preys_dist[j]:
-                preys_dist[j] = dist
-
-    return -np.mean(preys_dist)
-
-
-def get_reward_single(env,
-                      state: np.ndarray, 
-                      action: np.ndarray, 
-                      distance_map: np.ndarray,
-                      k: int = 1):
-    
-    cur_value = calc_closeness(state, distance_map)
-    next_values = []
-
-    for i in range(k):
-        next_state, done, info = copy.deepcopy(env).step(action)
-        if not done:
-            next_values.append(
-                # 10 * len(info['eaten']) + calc_closeness(next_state, distance_map))
-                10 * len(info['eaten']))
-        else:
-            next_values.append(10 * len(info['eaten']))
-
-    E_next_values = np.mean(next_values)
-    #reward = (E_next_values - cur_value)
-    if E_next_values != 0:
-        # reward = cur_value / E_next_values - 1
-        reward = E_next_values
-    else:
-        reward = 0
-
-
-    return reward
-
 
 
 def calc_closeness_id(state: np.ndarray,
@@ -188,7 +142,6 @@ def closest_n_reward(state: np.ndarray,
 # distance_map = calc_distance_map(state)
 # check = np.zeros((40, 40))
 
-# y, x = 10, 30
 # for y1 in range(40):
 #     for x1 in range(40):
 #         check[y1, x1] = distance_map[y * 40 + x, y1 * 40 + x1]
