@@ -82,20 +82,21 @@ class singe_DQN(ScriptedAgent):
         if NET == 'conv':
 
             self.model = nn.Sequential(
-                nn.Conv2d(3, 32, 3, 1),
+                nn.Conv2d(3, 32, 3, 1, 1),
                 nn.ReLU(),
-                nn.Conv2d(32, 32, 3, 1),
+                nn.Conv2d(32, 32, 3, 1, 1),
                 nn.ReLU(),
                 nn.MaxPool2d(2, 2),
-                nn.Conv2d(32, 64, 3, 1),
+                nn.Conv2d(32, 64, 3, 1, 1),
                 nn.ReLU(),
-                nn.Conv2d(64, 64, 3, 1),
+                nn.Conv2d(64, 64, 3, 1, 1),
                 nn.ReLU(),
+                nn.MaxPool2d(2, 2),
                 nn.Flatten(),
-                nn.Linear(12544, 5)).requires_grad_(True).to(DEVICE)
+                nn.Linear(6400, 5)).requires_grad_(True).to(DEVICE)
 
             # self.model = nn.Sequential(
-            #     nn.Conv2d(4, 32, 3, 1, 1),
+            #     nn.Conv2d(3, 32, 3, 1, 1),
             #     nn.ReLU(),
             #     nn.Conv2d(32, 32, 3, 2, 1),
             #     nn.ReLU(),
@@ -110,11 +111,7 @@ class singe_DQN(ScriptedAgent):
             #     nn.Conv2d(32, 32, 3, 2, 1),
             #     nn.ReLU(),
             #     nn.Flatten(),
-            #     nn.Linear(800, 200),
-            #     nn.ReLU(),
-            #     nn.Linear(200, 50),
-            #     nn.ReLU(),
-            #     nn.Linear(50, 5)).requires_grad_(True).to(DEVICE)
+            #     nn.Linear(800, 5)).requires_grad_(True).to(DEVICE)
 
         if NET == 'linear':
 
