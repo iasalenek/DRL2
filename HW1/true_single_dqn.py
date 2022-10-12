@@ -257,9 +257,10 @@ def evaluate_policy(agent, episodes=5):
 
             action = agent.get_actions(observations, distance_map, team=0)
 
-            print(action)
             next_state, done, info = env.step(action)
             state = next_state
+
+            total_eaten += len(info['eaten'])
 
         eaten.append(total_eaten)
 
