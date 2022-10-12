@@ -243,7 +243,7 @@ def evaluate_policy(agent, episodes=5):
     agent.model.eval()
     env = OnePlayerEnv(Realm(
         MixedMapLoader((SingleTeamLabyrinthMapLoader(), 
-        # SingleTeamRocksMapLoader()
+        SingleTeamRocksMapLoader()
         )),
         1
     ))
@@ -284,7 +284,7 @@ def evaluate_policy(agent, episodes=5):
 def main():
     env = OnePlayerEnv(Realm(
         MixedMapLoader((SingleTeamLabyrinthMapLoader(),
-        # SingleTeamRocksMapLoader()
+        SingleTeamRocksMapLoader()
         )),
         1, playable_team_size=1
     ))

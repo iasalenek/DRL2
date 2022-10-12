@@ -98,9 +98,10 @@ def closest_n_reward(state: np.ndarray,
     next_dist_n = next_dist_n[next_dist_n < 1600]
     if len(next_dist_n) > 0:
         next_value = -np.mean(next_dist_n)
-        reward = next_value - cur_value + 10 * len(info['eaten']) + 5 * moves
+        reward = next_value - cur_value + 20 * len(info['eaten']) + 5 * moves
     else:
-        reward = 10 * len(info['eaten']) + 5 * moves
+        reward = 20 * len(info['eaten']) + 5 * moves
+
 
     # ###
     # if debug:
