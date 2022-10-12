@@ -11,17 +11,19 @@ def compute_observation_single(state: np.ndarray,
     y, x = np.where((state[:, :, 0] == team) * (state[:, :, 1] == id))
     state_centred = np.roll(np.roll(state, 20 - y, axis=0), 20 - x, axis=1)
 
-    obs = np.zeros((40, 40, 4), dtype=int)
+    obs = np.zeros((40, 40, 3), dtype=int)
 
     #Наблюдения из state
 
-    obs[:, :, 0][state_centred[:, :, 1] == -1] = 1 # Препятствия
-    obs[:, :, 1][state_centred[:, :, 0] == 1] = 1  # Жертвы
-    obs[:, :, 2][state_centred[:, :, 0] == 0] = 1  # Хищники
+    obs[:, :, 0][state_centred[:, :, 0] == 1] = 1  # Жертвы
+    obs[:, :, 1][state_centred[:, :, 0] == 0] = 1  # Хищники
 
     # Distance map для агента
     distance_map = calc_distance_mat(distance_map, y, x)
-    obs[:, :, 3] = np.roll(np.roll(distance_map, 20 - y, axis=0), 20 - x, axis=1)
+    obs[:, :, 2] = np.roll(np.roll(distance_map, 20 - y, axis=0), 20 - x, axis=1)
+
+    # Содержится внутри предыдущего
+    # obs[:, :, 3][state_centred[:, :, 1] == -1] = 1 # Препятствия
     
     #Транспонируем наблюдения для сети
     obs = np.transpose(obs, (2, 0, 1))
@@ -72,7 +74,7 @@ def closest_n_reward(state: np.ndarray,
                      next_state: np.array,
                      info,
                      distance_map: np.ndarray,
-                     n: int = 5):
+                     n: int = 5, debug=False):
 
     # Все 100 жертв
     all_ids = np.arange(100)
@@ -95,11 +97,18 @@ def closest_n_reward(state: np.ndarray,
 
     reward = next_value - cur_value + 10 * len(info['eaten'])
 
-    ###
-    # import time
-    # print(reward)
-    # time.sleep(0.1)
-    ###
+    # ###
+    # if debug:
+    #     import time
+    #     if reward < -2:
+    #         print('---------------')
+    #         print(reward)
+    #         print(dist_n)
+    #         print(next_dist_n)
+    #         print(len(info['eaten']))
+    #         print('---------------')
+    #         time.sleep(5)
+    # ###
 
     return reward
 
@@ -114,6 +123,58 @@ def closest_n_reward(state: np.ndarray,
 # from world.scripted_agents import ScriptedAgent
 
 # import matplotlib.pyplot as plt
+
+
+
+
+# Визуализация маленьких наград
+
+# st = next_state.copy()
+
+# check_state = np.zeros((40, 40))
+# check_state[st[:, :, 0] == 0] = 2
+# check_state[st[:, :, 1] == -1] = 1
+# for id in ids_n:
+#     check_state[st[:, :, 1] == id] = 3
+
+# plt.imshow(check_state)
+# plt.show()
+
+
+
+#### GLOBAL CHECK!!!!
+
+# env = OnePlayerEnv(Realm(
+#         MixedMapLoader((SingleTeamLabyrinthMapLoader(),
+#         # SingleTeamRocksMapLoader()
+#         )),
+#         1
+#     ))
+
+# done = False
+# state, info = env.reset()
+# step = 0
+# while not done:
+#     action = [np.random.randint(5) for i in range(5)]
+#     next_state, done, next_info = env.step(action)
+#     step += 1
+
+# for id in range(100):
+#     x0, y0, x1, y1 = None, None, None, None
+#     for prey in info['preys']:
+#         if prey['id'] == id:
+#             x0, y0 = np.where((state[:, :, 0] == 1) * (state[:, :, 1] == id))
+#     for prey in next_info['preys']:
+#         if prey['id'] == id:
+#             x1, y1 =np.where((next_state[:, :, 0] == 1) * (next_state[:, :, 1] == id))
+        
+#     if (x0 is not None) and (x1 is not None):
+#         dx = (np.abs(x1 - x0)) % 39
+#         dy = (np.abs(y1 - y0)) % 39
+#         if (dx + dy > 1) and step != 301:
+#             print(f'step: {step}   id: {id}')
+#             print(f'x0: {x0}, x1: {x1}\ny0: {y0}, y1: {y1}')
+
 
 # env = OnePlayerEnv(Realm(
 #         MixedMapLoader((SingleTeamLabyrinthMapLoader(),

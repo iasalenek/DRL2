@@ -81,7 +81,7 @@ class singe_DQN(ScriptedAgent):
         if NET == 'conv':
 
             self.model = nn.Sequential(
-                nn.Conv2d(4, 32, 3, 1, 1),
+                nn.Conv2d(3, 32, 3, 1, 1),
                 nn.ReLU(),
                 nn.Conv2d(32, 32, 3, 1, 1),
                 nn.ReLU(),
@@ -243,7 +243,8 @@ def evaluate_policy(agent, episodes=5):
         while not done:
             action = agent.get_actions(state, distance_map, team=0)
             next_state, done, info = env.step(action)
-            reward = reward_func(state, action, next_state, info, distance_map)
+            reward = reward_func(state, action, next_state, info, distance_map, debug=False)
+            state = next_state
             
             total_reward += reward
             total_eaten += len(info['eaten'])
