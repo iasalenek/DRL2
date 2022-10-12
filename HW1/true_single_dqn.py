@@ -159,6 +159,11 @@ class singe_DQN(ScriptedAgent):
             # Считаем награду
             reward = reward_func(state, next_state, info, distance_map)
 
+            # ###
+            # print(reward)
+            # time.sleep(0.2)
+            # ###
+
             # ####
             # import matplotlib.pyplot as plt
             # plt.imshow(obs[0])
