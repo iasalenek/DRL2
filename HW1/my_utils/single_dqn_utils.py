@@ -91,16 +91,16 @@ def closest_n_reward(state: np.ndarray,
     cur_value = -np.mean(dist_n)
 
     # Штраф за стояние на месте
-    no_move = np.sum((state[:, :, 0] == 0) != (next_state[:, :, 0] == 0))
+    moves = np.sum((state[:, :, 0] == 0) != (next_state[:, :, 0] == 0))
 
     # Считаем матожидание следущих состояний
     next_dist_n = calc_closeness_id(next_state, distance_map, ids_n)
     next_dist_n = next_dist_n[next_dist_n < 1600]
     if len(next_dist_n) > 0:
         next_value = -np.mean(next_dist_n)
-        reward = next_value - cur_value + 10 * len(info['eaten']) - 5 * no_move
+        reward = next_value - cur_value + 10 * len(info['eaten']) + 5 * moves
     else:
-        reward = 10 * len(info['eaten']) - 5 * no_move
+        reward = 10 * len(info['eaten']) + 5 * moves
 
     # ###
     # if debug:
