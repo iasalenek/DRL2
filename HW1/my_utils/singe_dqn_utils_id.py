@@ -7,23 +7,23 @@ def compute_observation_single(state: np.ndarray,
                                id: int,
                                distance_map: np.ndarray,
                                team: int = 0):
-    # ###
-    # state = np.sum((state[:, :, 0] == team) * (state[:, :, 1] != id))
-    # ###
+    ###
+    state = np.sum((state[:, :, 0] == team) * (state[:, :, 1] != id))
+    ###
     
     y, x = np.where((state[:, :, 0] == team) * (state[:, :, 1] == id))
     state_centred = np.roll(np.roll(state, 20 - y, axis=0), 20 - x, axis=1)
 
-    obs = np.zeros((40, 40, 2), dtype=int)
+    obs = np.zeros((40, 40, 3), dtype=int)
 
     #Наблюдения из state
 
     obs[:, :, 0][state_centred[:, :, 0] == 1] = 1  # Жертвы
-    # obs[:, :, 1][state_centred[:, :, 0] == 0] = 1  # Хищники
+    obs[:, :, 1][state_centred[:, :, 0] == 0] = 1  # Хищники
 
     # Distance map для агента
     distance_map = calc_distance_mat(distance_map, y, x)
-    obs[:, :, 1] = np.roll(np.roll(distance_map, 20 - y, axis=0), 20 - x, axis=1)
+    obs[:, :, 2] = np.roll(np.roll(distance_map, 20 - y, axis=0), 20 - x, axis=1)
 
     # Содержится внутри предыдущего
     # obs[:, :, 3][state_centred[:, :, 1] == -1] = 1 # Препятствия
@@ -45,7 +45,8 @@ def compute_observation_single(state: np.ndarray,
     return obs
 
 
-def calc_closeness_id(state: np.ndarray,
+def calc_closeness_id(id: int,
+                      state: np.ndarray,
                       distance_map: np.ndarray,
                       ids: np.ndarray):
 
@@ -72,12 +73,17 @@ def calc_closeness_id(state: np.ndarray,
 
 
 
-def closest_n_reward(state: np.ndarray,
+def closest_n_reward(id: int,
+                     state: np.ndarray,
                      action: np.ndarray, 
                      next_state: np.array,
                      info,
                      distance_map: np.ndarray,
                      n: int = 5, debug=False):
+
+    ###
+    state = np.sum((state[:, :, 0] == team) * (state[:, :, 1] != id))
+    ###
 
     # Все 100 жертв
     all_ids = np.arange(100)

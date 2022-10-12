@@ -21,14 +21,12 @@ class Agent():
         observations = np.array(observations)
         observations.shape
         
-        ####
-        #import time
-        #print(self.model(torch.Tensor(observations).to(DEVICE)))
-        #time.sleep(5)
-        ####
         actions = self.model(torch.Tensor(observations).to(DEVICE)).argmax(axis=1)
-
+        
+        ####
         print(actions)
+        ####
+        
         return actions.to(int).cpu().detach().tolist()
 
     def reset(self, state, info):
