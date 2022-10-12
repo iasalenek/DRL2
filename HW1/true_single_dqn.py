@@ -82,21 +82,17 @@ class singe_DQN(ScriptedAgent):
         if NET == 'conv':
 
             self.model = nn.Sequential(
-                nn.Conv2d(2, 32, 3, 1, 1),
+                nn.Conv2d(2, 32, 3, 1),
                 nn.ReLU(),
-                nn.Conv2d(32, 32, 3, 1, 1),
+                nn.Conv2d(32, 32, 3, 1),
                 nn.ReLU(),
-                nn.Dropout2d(0.2),
-                nn.AvgPool2d(2),
-                nn.Conv2d(32, 64, 3, 1, 1),
+                nn.MaxPool2d(2, 2),
+                nn.Conv2d(32, 64, 3, 1),
                 nn.ReLU(),
-                nn.Conv2d(64, 64, 3, 1, 1),
+                nn.Conv2d(64, 64, 3, 1),
                 nn.ReLU(),
-                nn.Dropout2d(0.2),
-                nn.AvgPool2d(2),
                 nn.Flatten(),
-                nn.Linear(6400, 5)).requires_grad_(True).to(DEVICE)
-
+                nn.Linear(12544, 5)).requires_grad_(True).to(DEVICE)
 
             # self.model = nn.Sequential(
             #     nn.Conv2d(4, 32, 3, 1, 1),
@@ -163,10 +159,14 @@ class singe_DQN(ScriptedAgent):
             # Считаем награду
             reward = reward_func(state, action, next_state, info, distance_map)
 
-            # ####
-            # print(reward)
-            # time.sleep(0.2)
-            # ####
+            ####
+            import matplotlib.pyplot as plt
+            plt.imshow(obs[0])
+            plt.show()
+            plt.imshow(obs[1].clip(0, 100))
+            plt.show()
+            time.sleep(10)
+            ####
             
             observations.append(obs)
             actions.append(action)
@@ -195,6 +195,11 @@ class singe_DQN(ScriptedAgent):
         Q = self.model(observations)[torch.arange(BATCH_SIZE), actions.to(int)][:, None]
 
         Q_next = torch.amax(self.target_model(next_observations), dim=1, keepdim=True) * torch.logical_not(dones)
+
+        # ####
+        # print(torch.stack([Q, Q_next], dim=1))
+        # time.sleep(20)
+        # ####
 
         loss = F.mse_loss(Q, rewards + GAMMA * Q_next)
         loss.backward()
@@ -313,7 +318,7 @@ def main():
 
         if (i + 1) % (EVAL_EVERY) == 0:
                 eaten = evaluate_policy(dqn, EPISODES)
-                print(f"Step: {i+1}, Eaten mean: {np.mean(eaten)}, Eaten std: {np.std(eaten)}")
+                print(f"\nStep: {i+1}, Eaten mean: {np.mean(eaten)}, Eaten std: {np.std(eaten)}")
                 dqn.save()
 
 
