@@ -74,7 +74,7 @@ def closest_n_reward(state: np.ndarray,
                      next_state: np.array,
                      info,
                      distance_map: np.ndarray,
-                     n: int = 5, debug=False):
+                     n: int = 1, debug=False):
 
     # Все 100 жертв
     all_ids = np.arange(100)
@@ -93,9 +93,11 @@ def closest_n_reward(state: np.ndarray,
     # Считаем матожидание следущих состояний
     next_dist_n = calc_closeness_id(next_state, distance_map, ids_n)
     next_dist_n = next_dist_n[next_dist_n < 1600]
-    next_value = -np.mean(next_dist_n)
-
-    reward = next_value - cur_value + 10 * len(info['eaten'])
+    if len(next_dist_n) > 0:
+        next_value = -np.mean(next_dist_n)
+        reward = next_value - cur_value + 10 * len(info['eaten'])
+    else:
+        reward = 10 * len(info['eaten'])
 
     # ###
     # if debug:

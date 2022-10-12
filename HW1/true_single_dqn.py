@@ -163,7 +163,9 @@ class singe_DQN(ScriptedAgent):
             # import matplotlib.pyplot as plt
             # plt.imshow(obs[0])
             # plt.show()
-            # plt.imshow(obs[1].clip(0, 100))
+            # plt.imshow(obs[1])
+            # plt.show()
+            # plt.imshow(obs[2])
             # plt.show()
             # time.sleep(10)
             # ####
