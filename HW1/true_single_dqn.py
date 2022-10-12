@@ -208,8 +208,8 @@ class singe_DQN(ScriptedAgent):
     
     def get_actions(self, observations, distance_map, team=0):
         
-        actions = self.model(torch.Tensor(observation).to(DEVICE)).argmax(axis=1)
-        
+        actions = self.model(torch.Tensor(observations).to(DEVICE)).argmax(axis=1)
+
         return actions.to(int).cpu().detach()
 
     def update(self, transition):
@@ -256,6 +256,8 @@ def evaluate_policy(agent, episodes=5):
             observations = np.array(observations)
 
             action = agent.get_actions(observations, distance_map, team=0)
+
+            print(action)
             next_state, done, info = env.step(action)
             state = next_state
 
@@ -266,7 +268,7 @@ def evaluate_policy(agent, episodes=5):
     return eaten
 
 
-if __name__ == "__main__":
+def main():
     env = OnePlayerEnv(Realm(
         MixedMapLoader((SingleTeamLabyrinthMapLoader(),
         # SingleTeamRocksMapLoader()
@@ -312,3 +314,7 @@ if __name__ == "__main__":
                 eaten = evaluate_policy(dqn, EPISODES)
                 print(f"Step: {i+1}, Eaten mean: {np.mean(eaten)}, Eaten std: {np.std(eaten)}")
                 dqn.save()
+
+
+if __name__ == "__main__":
+    main()
