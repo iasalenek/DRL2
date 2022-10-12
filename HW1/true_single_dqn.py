@@ -33,11 +33,11 @@ parser.add_argument('--transitions', type=int, default=50000)
 parser.add_argument('--buffer_size', type=int, default=10000)
 parser.add_argument('--initial_steps', type=int, default=10000)
 parser.add_argument('--step_per_update', type=int, default=4)
-parser.add_argument('--target_update', type=int, default=500)
+parser.add_argument('--target_update', type=int, default=4000)
 parser.add_argument('--num_predators', type=int, default=5)
 parser.add_argument('--epsilon', type=float, default=0.3)
 parser.add_argument('--eval_every', type=int, default=1000)
-parser.add_argument('--episodes', type=int, default=5)
+parser.add_argument('--episodes', type=int, default=10)
 
 args = parser.parse_args()                       
 
@@ -82,7 +82,7 @@ class singe_DQN(ScriptedAgent):
         if NET == 'conv':
 
             self.model = nn.Sequential(
-                nn.Conv2d(2, 32, 3, 1),
+                nn.Conv2d(3, 32, 3, 1),
                 nn.ReLU(),
                 nn.Conv2d(32, 32, 3, 1),
                 nn.ReLU(),
@@ -157,7 +157,7 @@ class singe_DQN(ScriptedAgent):
             next_obs = compute_observation_single(next_state, self.id, distance_map)
 
             # Считаем награду
-            reward = reward_func(state, action, next_state, info, distance_map)
+            reward = reward_func(state, next_state, info, distance_map)
 
             # ####
             # import matplotlib.pyplot as plt

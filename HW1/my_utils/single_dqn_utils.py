@@ -14,20 +14,18 @@ def compute_observation_single(state: np.ndarray,
     y, x = np.where((state[:, :, 0] == team) * (state[:, :, 1] == id))
     state_centred = np.roll(np.roll(state, 20 - y, axis=0), 20 - x, axis=1)
 
-    obs = np.zeros((40, 40, 2), dtype=int)
+    obs = np.zeros((40, 40, 3), dtype=int)
 
     #Наблюдения из state
 
-    obs[:, :, 0][state_centred[:, :, 0] == 1] = 1  # Жертвы
+    obs[:, :, 0][state_centred[:, :, 1] == -1] = 1 # Препятствия
+    obs[:, :, 1][state_centred[:, :, 0] == 1] = 1  # Жертвы
     # obs[:, :, 1][state_centred[:, :, 0] == 0] = 1  # Хищники
 
     # Distance map для агента
     distance_map = calc_distance_mat(distance_map, y, x)
-    obs[:, :, 1] = np.roll(np.roll(distance_map, 20 - y, axis=0), 20 - x, axis=1)
+    obs[:, :, 2] = np.roll(np.roll(distance_map, 20 - y, axis=0), 20 - x, axis=1).clip(0, 100)
 
-    # Содержится внутри предыдущего
-    # obs[:, :, 3][state_centred[:, :, 1] == -1] = 1 # Препятствия
-    
     #Транспонируем наблюдения для сети
     obs = np.transpose(obs, (2, 0, 1))
 
@@ -73,7 +71,6 @@ def calc_closeness_id(state: np.ndarray,
 
 
 def closest_n_reward(state: np.ndarray,
-                     action: np.ndarray, 
                      next_state: np.array,
                      info,
                      distance_map: np.ndarray,
