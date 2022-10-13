@@ -19,15 +19,24 @@ if __name__ == "__main__":
         1
     ))
     env = RenderedEnvWrapper(env)
-    agent = Agent()
+    agent = ClosestTargetAgent()
     for i in range(4):
         state, info = env.reset()
         agent.reset(state, 0)
         done = False
         while not done:
+            ###
+            import time
+            if len(info['eaten']) > 0:
+                print(info['eaten'])
+                break
+            time.sleep(10) 
+            [(i, j) for i, j in info['eaten']]
+            ###
             action = agent.get_actions(state, 0)
             state, done, info = env.step(action)
         env.render(f"render/one_player_env/{i}")
+        
 
     # Task 2
     # env = VersusBotEnv(Realm(

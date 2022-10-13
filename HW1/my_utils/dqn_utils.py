@@ -1,111 +1,97 @@
 import copy
 import numpy as np
+from my_utils.common_utils import calc_distance_map, calc_distance_mat
 
 
 def compute_observation(state: np.ndarray, 
-                        num_predators: int = 5,
+                        id: int,
+                        distance_map: np.ndarray,
                         team: int = 0):
 
-    states = []
-    state[(state[:, :, 1] == -1)] = [-2, -1]
+    y, x = np.where((state[:, :, 0] == team) * (state[:, :, 1] == id))
+    state_centred = np.roll(np.roll(state, 20 - y, axis=0), 20 - x, axis=1)
 
-    for i in range(num_predators):
-        y, x = np.where((state[:, :, 0] == team) * (state[:, :, 1] == i))
-        states.append(np.roll(np.roll(state[:, :, 0:1], 20 - y, axis=0), 20 - x, axis=1))
+    
+    obs = np.zeros((40, 40, 4), dtype=int)
 
-    obs = np.transpose(np.dstack(states), (2, 0, 1))
+    #Наблюдения из state
 
-    # import matplotlib.pyplot as plt
-    # plt.imshow(obs[0])
-    # plt.show()
+    obs[:, :, 0][state_centred[:, :, 1] == -1] = 1 # Препятствия
+    obs[:, :, 1][state_centred[:, :, 0] == 1] = 1  # Жертвы
+    obs[:, :, 2][state_centred[:, :, 0] == 0] = 1  # Хищники
+
+    # Distance map для агента
+    distance_map = calc_distance_mat(distance_map, y, x)
+    obs[:, :, 3] = np.roll(np.roll(distance_map, 20 - y, axis=0), 20 - x, axis=1)# .clip(0, 100)
+
+    #Транспонируем наблюдения для сети
+    obs = np.transpose(obs, (2, 0, 1))
 
     return obs
 
-def calc_distance_map(initial_state):
-    
-    mask = np.zeros(initial_state.shape[:2], np.bool)
-    mask[np.logical_or(np.logical_and(initial_state[:, :, 0] == -1, initial_state[:, :, 1] == 0),
-                        initial_state[:, :, 0] >= 0)] = True
-    mask = mask.reshape(-1)
 
-    coords_amount = initial_state.shape[0] * initial_state.shape[1]
-    distance_map = (coords_amount + 1) * np.ones((coords_amount, coords_amount))
-    np.fill_diagonal(distance_map, 0.)
-    distance_map[np.logical_not(mask)] = (coords_amount + 1)
-    distance_map[:, np.logical_not(mask)] = (coords_amount + 1)
+def calc_closeness_id(state: np.ndarray,
+                      distance_map: np.ndarray,
+                      ids: np.ndarray):
 
-    indexes_helper = [
-        [
-            x * initial_state.shape[1] + (y + 1) % initial_state.shape[1],
-            x * initial_state.shape[1] + (initial_state.shape[1] + y - 1) % initial_state.shape[1],
-            ((initial_state.shape[0] + x - 1) % initial_state.shape[0]) * initial_state.shape[1] + y,
-            ((x + 1) % initial_state.shape[0]) * initial_state.shape[1] + y
-        ]
-        for x in range(initial_state.shape[0]) for y in range(initial_state.shape[1])
-    ]
-
-    updated = True
-    while updated:
-        old_distances = copy.deepcopy(distance_map)
-        for j in range(coords_amount):
-            if mask[j]:
-                for i in indexes_helper[j]:
-                    if mask[i]:
-                        distance_map[j] = np.minimum(distance_map[j], distance_map[i] + 1)
-        updated = (old_distances != distance_map).sum() > 0
-
-    return distance_map
-
-
-def calc_closeness(state: np.ndarray, 
-                   distance_map: np.ndarray,
-                   num_predators: int):
+    # Здесь команда охотников равна 0
 
     preys_team = np.max(state[:, :, 0])
-    num_preys = np.sum(state[:, :, 0] == preys_team)
     preys_ind = np.where(state[:, :, 0] == preys_team)
+    predators_ind = np.where(state[:, :, 0] == 0)
 
-    preys_dist = np.ones(num_preys) * 1601
+    preys_dist = np.ones_like(ids) * 1601
 
-    for i in range(num_predators):
+    for y1, x1 in zip(*preys_ind):
 
-        y, x = np.where((state[:, :, 0] == 0) * (state[:, :, 1] == i))
-        y, x = int(x), int(y)
+        id = state[y1, x1][1]
+        if id in ids:
 
-        for j in range(num_preys):
-            y1, x1 = preys_ind[0][j], preys_ind[1][j]
+            for y, x in zip(*predators_ind):
+                dist = distance_map[y * 40 + x, y1 * 40 + x1]
 
-            dist = distance_map[y * state.shape[0] + x, y1 * state.shape[0] + x1]
+                if dist < preys_dist[np.where(ids == id)]:
+                    preys_dist[np.where(ids == id)] = dist
 
-            if dist < preys_dist[j]:
-                preys_dist[j] = dist
-
-    return -np.mean(preys_dist)
+    return preys_dist
 
 
-def get_reward_1(env,
-                 state: np.ndarray, 
-                 action: np.ndarray, 
-                 distance_map: np.ndarray,
-                 num_predators: int,
-                 k: int = 1):
-    
-    cur_value = calc_closeness(state, distance_map, num_predators)
-    next_values = []
+def closest_n_reward(id: int,
+                     state: np.ndarray,
+                     next_state: np.array,
+                     info,
+                     distance_map: np.ndarray,
+                     n: int = 5, debug=False):
 
-    # Штраф за отсутствие движения
-    #next_state, done, info = copy.deepcopy(env).step(action)
-    #no_movement_penalty = -np.sum(next_state[state[:, :, 0] == 0][:, 0] == 0) * 10
+    # Все 100 жертв
+    all_ids = np.arange(100)
+    all_dist = calc_closeness_id(state, distance_map, all_ids)
 
-    for i in range(k):
-        next_state, done, info = copy.deepcopy(env).step(action)
-        if not done:
-            next_values.append(
-                10 * len(info['eaten']) + calc_closeness(next_state, distance_map, num_predators))
-        else:
-            next_values.append(0)
+    # Только оставшиеся и достижимые жертвы
+    ids = all_ids[all_dist < 1600]
+    dist = all_dist[all_dist < 1600]
 
-    E_next_values = np.mean(next_values)
-    reward = (E_next_values - cur_value)
+    # n ближайших жертв
+    #ids_n = ids[np.argpartition(dist, min(n, len(dist) - 1))[:n]]
+    ids_n = ids[np.argsort(dist)[:n]]
+    dist_n = calc_closeness_id(state, distance_map, ids_n)
+    cur_value = -np.mean(dist_n)
+
+    # Штраф за стояние на месте
+    moves_id = np.sum(
+        (state[:, :, 0] == 0) * (state[:, :, 1] == id) != 
+        (next_state[:, :, 0] == 0) * (next_state[:, :, 1] == id)) // 2
+
+    eaten_id = np.sum([v[1] == id for k, v in info['eaten'].items()])
+
+    next_dist_n = calc_closeness_id(next_state, distance_map, ids_n)
+    next_dist_n = next_dist_n[next_dist_n < 1600]
+
+
+    if len(next_dist_n) > 0:
+        next_value = -np.mean(next_dist_n)
+        reward = next_value - cur_value + 20 * eaten_id + 5 * moves_id
+    else:
+        reward = 20 * eaten_id + 5 * moves_id
 
     return reward

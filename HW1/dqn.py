@@ -20,8 +20,8 @@ from torch.nn import functional as F
 from torch.optim import Adam
 
 from my_utils.common_utils import calc_distance_map
-from my_utils.single_dqn_utils import (compute_observation_single,
-                                       closest_n_reward)
+from my_utils.dqn_utils import (compute_observation,
+                                closest_n_reward)
 
 import argparse
 parser = argparse.ArgumentParser()
@@ -33,11 +33,11 @@ parser.add_argument('--transitions', type=int, default=50000)
 parser.add_argument('--buffer_size', type=int, default=10000)
 parser.add_argument('--initial_steps', type=int, default=10000)
 parser.add_argument('--step_per_update', type=int, default=4)
-parser.add_argument('--target_update', type=int, default=500)
+parser.add_argument('--target_update', type=int, default=4000)
 parser.add_argument('--num_predators', type=int, default=5)
 parser.add_argument('--epsilon', type=float, default=0.3)
 parser.add_argument('--eval_every', type=int, default=1000)
-parser.add_argument('--episodes', type=int, default=5)
+parser.add_argument('--episodes', type=int, default=10)
 
 args = parser.parse_args()                       
 
@@ -72,33 +72,30 @@ print(f'EPISODES: {EPISODES}')
 
 reward_func = closest_n_reward
 
-class singe_DQN(ScriptedAgent):
+class DQN(ScriptedAgent):
 
-    def __init__(self):
+    def __init__(self, id: int = 0):
         
         self.steps = 0
 
         if NET == 'conv':
 
             self.model = nn.Sequential(
-                nn.Conv2d(3, 32, 3, 1, 1),
+                nn.Conv2d(4, 32, 3, 1, 1),
                 nn.ReLU(),
                 nn.Conv2d(32, 32, 3, 1, 1),
                 nn.ReLU(),
-                nn.Dropout2d(0.2),
-                nn.AvgPool2d(2),
+                nn.MaxPool2d(2, 2),
                 nn.Conv2d(32, 64, 3, 1, 1),
                 nn.ReLU(),
                 nn.Conv2d(64, 64, 3, 1, 1),
                 nn.ReLU(),
-                nn.Dropout2d(0.2),
-                nn.AvgPool2d(2),
+                nn.MaxPool2d(2, 2),
                 nn.Flatten(),
                 nn.Linear(6400, 5)).requires_grad_(True).to(DEVICE)
 
-
             # self.model = nn.Sequential(
-            #     nn.Conv2d(4, 32, 3, 1, 1),
+            #     nn.Conv2d(3, 32, 3, 1, 1),
             #     nn.ReLU(),
             #     nn.Conv2d(32, 32, 3, 2, 1),
             #     nn.ReLU(),
@@ -113,11 +110,7 @@ class singe_DQN(ScriptedAgent):
             #     nn.Conv2d(32, 32, 3, 2, 1),
             #     nn.ReLU(),
             #     nn.Flatten(),
-            #     nn.Linear(800, 200),
-            #     nn.ReLU(),
-            #     nn.Linear(200, 50),
-            #     nn.ReLU(),
-            #     nn.Linear(50, 5)).requires_grad_(True).to(DEVICE)
+            #     nn.Linear(800, 5)).requires_grad_(True).to(DEVICE)
 
         if NET == 'linear':
 
@@ -153,23 +146,23 @@ class singe_DQN(ScriptedAgent):
             state, action, next_state, done, distance_map, info = experience
 
             # Оставляем только действие одного агента
-            # agent_id = np.random.randint(5)
-            agent_id = 0
-            action_id = action[agent_id]
+
+            agent_id = np.random.randint(5)
+            action = action[agent_id]
 
             # Считаем наблюдения из состояний
-            obs = compute_observation_single(state, agent_id, distance_map)
-            next_obs = compute_observation_single(next_state, agent_id, distance_map)
+            obs = compute_observation(state, agent_id, distance_map)
+            next_obs = compute_observation(next_state, agent_id, distance_map)
 
             # Считаем награду
-            reward = reward_func(state, action, next_state, info, distance_map)
-            
+            reward = reward_func(agent_id, state, next_state, info, distance_map)
+
             observations.append(obs)
-            actions.append(action_id)
+            actions.append(action)
             next_observations.append(next_obs)
             dones.append([done])
             rewards.append([reward])
-        
+
         return [torch.Tensor(np.array(i)).to(DEVICE) for i in [
                     observations, actions, next_observations, rewards, dones]]
 
@@ -177,14 +170,27 @@ class singe_DQN(ScriptedAgent):
     def train_step(self, batch):
         observations, actions, next_observations, rewards, dones = batch
 
+        # ####
+        # print(f'obs shape: {observations.shape}')
+        # print(f'actions shape: {actions.shape}')
+        # print(f'next_obs shape: {next_observations.shape}')
+        # print(f'dones shape: {dones.shape}')
+        # print(f'rewards shape: {rewards.shape}')
+        # time.sleep(10)
+        # ###
+    
         self.optimizer.zero_grad()
 
         Q = self.model(observations)[torch.arange(BATCH_SIZE), actions.to(int)][:, None]
 
         Q_next = torch.amax(self.target_model(next_observations), dim=1, keepdim=True) * torch.logical_not(dones)
 
+        # ####
+        # print(torch.stack([Q, Q_next], dim=1))
+        # time.sleep(20)
+        # ####
+
         loss = F.mse_loss(Q, rewards + GAMMA * Q_next)
-        print(loss)
         loss.backward()
 
         self.optimizer.step()
@@ -194,17 +200,10 @@ class singe_DQN(ScriptedAgent):
         # assign a values of network parameters via PyTorch methods.
         self.target_model = copy.deepcopy(self.model).requires_grad_(False).to(DEVICE)
     
-    def get_actions(self, state, distance_map, team=0):
-        
-        observations = []
-        for i in range(5):
-            obs = compute_observation_single(state, i, distance_map)
-            observations.append(obs)
-
-        observations = np.array(observations)
-        observations.shape
+    def get_actions(self, observations, distance_map, team=0):
         
         actions = self.model(torch.Tensor(observations).to(DEVICE)).argmax(axis=1)
+
         return actions.to(int).cpu().detach().tolist()
 
     def update(self, transition):
@@ -226,7 +225,7 @@ def evaluate_policy(agent, episodes=5):
     agent.model.eval()
     env = OnePlayerEnv(Realm(
         MixedMapLoader((SingleTeamLabyrinthMapLoader(), 
-        # SingleTeamRocksMapLoader()
+        SingleTeamRocksMapLoader()
         )),
         1
     ))
@@ -236,43 +235,48 @@ def evaluate_policy(agent, episodes=5):
 
     for _ in range(episodes):
         done = False
-        total_reward = 0.
         total_eaten = 0
         state, info = env.reset()
         agent.reset(state, 0)
         distance_map = calc_distance_map(state)
         
         while not done:
-            action = agent.get_actions(state, distance_map, team=0)
+
+            observations = []
+            for agent_id in range(5):
+                obs = compute_observation(state, agent_id, distance_map)
+                observations.append(obs)
+
+            observations = np.array(observations)
+
+            action = agent.get_actions(observations, distance_map, team=0)
+
             next_state, done, info = env.step(action)
-            reward = reward_func(state, action, next_state, info, distance_map, debug=False)
             state = next_state
-            
-            total_reward += reward
+
             total_eaten += len(info['eaten'])
 
-        returns.append(total_reward)
         eaten.append(total_eaten)
 
     agent.model.train()
         
-    return returns, eaten
+    return eaten
 
 
-if __name__ == "__main__":
+def main():
     env = OnePlayerEnv(Realm(
         MixedMapLoader((SingleTeamLabyrinthMapLoader(),
-        # SingleTeamRocksMapLoader()
+        SingleTeamRocksMapLoader()
         )),
-        1, playable_team_size=1
+        1, playable_team_size=5
     ))
-    dqn = singe_DQN()
+    dqn = DQN()
     state, info = env.reset()
     distance_map = calc_distance_map(state)
 
     for _ in range(INITIAL_STEPS):
 
-        action = [np.random.randint(5) for i in range(5)]
+        action = [np.random.randint(5)] * 5
         next_state, done, info = env.step(action)
         dqn.consume_transition((state, action, next_state, done, distance_map,info))
         
@@ -283,11 +287,18 @@ if __name__ == "__main__":
             distance_map = calc_distance_map(state)
 
     for i in tqdm(range(TRANSITIONS)):
-        #Epsilon-greedy policy
+
+        observations = []
+        for agent_id in range(5):
+            obs = compute_observation(state, agent_id, distance_map)
+            observations.append(obs)
+
+        observations = np.array(observations)
+
         if random.random() < EPSILON:
-            action = [np.random.randint(5) for i in range(NUM_PREDATORS)]
+            action = [np.random.randint(5)] * 5
         else:
-            action = dqn.get_actions(state, distance_map)
+            action = dqn.get_actions(observations, distance_map)
 
         next_state, done, info = env.step(action)
         dqn.update((state, action, next_state, done, distance_map,info))
@@ -299,7 +310,10 @@ if __name__ == "__main__":
             distance_map = calc_distance_map(state)
 
         if (i + 1) % (EVAL_EVERY) == 0:
-                rewards, eaten = evaluate_policy(dqn, EPISODES)
-                print(f"\n Step: {i+1}, Reward mean: {np.mean(rewards)}, Reward std: {np.std(rewards)}")
-                print(f"Step: {i+1}, Eaten mean: {np.mean(eaten)}, Eaten std: {np.std(eaten)}\n")
-                dqn.save()
+            eaten = evaluate_policy(dqn, EPISODES)
+            print(f"\nStep: {i+1}, Eaten mean: {np.mean(eaten)}, Eaten std: {np.std(eaten)}")
+            dqn.save()
+
+
+if __name__ == "__main__":
+    main()
