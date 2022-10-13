@@ -23,6 +23,7 @@ def compute_observation(state: np.ndarray,
     # Distance map для агента
     distance_map = calc_distance_mat(distance_map, y, x)
     obs[:, :, 3] = np.roll(np.roll(distance_map, 20 - y, axis=0), 20 - x, axis=1)# .clip(0, 100)
+    obs[:, :, 3][obs[:, :, 3] > 1600] = 0
 
     #Транспонируем наблюдения для сети
     obs = np.transpose(obs, (2, 0, 1))
