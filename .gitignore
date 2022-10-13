@@ -3,6 +3,21 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Лишние файлы и папки
+Submission/**
+Presentation/**
+checkpoint
+
+HW1/agent.pkl
+HW1/presentation.py
+
+HW1/example.py
+HW1/true_single_dqn.py
+HW1/example.py
+HW1/my_utils/single_dqn_utils.py
+
+
+
 # C extensions
 *.so
 
