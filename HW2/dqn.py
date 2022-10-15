@@ -6,7 +6,7 @@ from world.map_loaders.single_team import SingleTeamLabyrinthMapLoader, SingleTe
 from world.map_loaders.two_teams import TwoTeamLabyrinthMapLoader, TwoTeamRocksMapLoader
 from world.scripted_agents import ScriptedAgent
 
-from world.scripted_agents import ClosestTargetAgent
+from world.scripted_agents import ClosestTargetAgent, BrokenClosestTargetAgent
 
 import abc
 import random
