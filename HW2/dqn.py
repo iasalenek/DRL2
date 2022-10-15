@@ -27,8 +27,8 @@ from my_utils.dqn_utils import (compute_observation,
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--batch_size', type=int, default=128)
-parser.add_argument('--lr', type=float, default=0.001)
+parser.add_argument('--batch_size', type=int, default=16)
+parser.add_argument('--lr', type=float, default=0.0005)
 parser.add_argument('--device', type=str, default='cpu')
 parser.add_argument('--net', type=str, default='conv')
 parser.add_argument('--transitions', type=int, default=50000)
@@ -37,8 +37,8 @@ parser.add_argument('--initial_steps', type=int, default=10000)
 parser.add_argument('--step_per_update', type=int, default=4)
 parser.add_argument('--target_update', type=int, default=4000)
 parser.add_argument('--num_predators', type=int, default=5)
-parser.add_argument('--epsilon', type=float, default=0.3)
-parser.add_argument('--eval_every', type=int, default=1000)
+parser.add_argument('--epsilon', type=float, default=0.2)
+parser.add_argument('--eval_every', type=int, default=10000)
 parser.add_argument('--episodes', type=int, default=10)
 
 args = parser.parse_args()                       
@@ -229,7 +229,7 @@ def evaluate_policy(agent, episodes=5):
     env = VersusBotEnv(Realm(
         MixedMapLoader((TwoTeamLabyrinthMapLoader(), TwoTeamRocksMapLoader())),
         2,
-        bots={1: ClosestTargetAgent()}
+        bots={1: BrokenClosestTargetAgent()}
     ))
 
     scores_0 = []
@@ -267,7 +267,7 @@ def main():
     env = VersusBotEnv(Realm(
         MixedMapLoader((TwoTeamLabyrinthMapLoader(), TwoTeamRocksMapLoader())),
         2,
-        bots={1: ClosestTargetAgent()}
+        bots={1: BrokenClosestTargetAgent()}
     ))
     dqn = DQN()
     state, info = env.reset()
@@ -310,7 +310,7 @@ def main():
 
         if (i + 1) % (EVAL_EVERY) == 0:
             score_0, score_1 = evaluate_policy(dqn, EPISODES)
-            print(f"\nscore_0 mean: {np.mean(score_0)}, score_0 var: {np.var(score_0)}\nscore_1 mean: {np.mean(score_1)}, score_1 var: {np.var(score_1)}")
+            print(f"\nscore_0 mean: {np.mean(score_0)}, score_0 var: {np.var(score_0)}\nscore_1 mean: {np.mean(score_1)}, score_1 var: {np.var(score_1)}\nwinrate: {np.mean(score_0 > score_1)}")
             dqn.save()
 
 
