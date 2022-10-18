@@ -83,7 +83,7 @@ class DQN(ScriptedAgent):
         if NET == 'conv':
 
             self.model = nn.Sequential(
-                nn.Conv2d(5, 32, 3, 1, 1),
+                nn.Conv2d(6, 32, 3, 1, 1),
                 nn.ReLU(),
                 nn.Conv2d(32, 32, 3, 1, 1),
                 nn.ReLU(),
@@ -95,37 +95,6 @@ class DQN(ScriptedAgent):
                 nn.MaxPool2d(2, 2),
                 nn.Flatten(),
                 nn.Linear(6400, 5)).requires_grad_(True).to(DEVICE)
-
-            # self.model = nn.Sequential(
-            #     nn.Conv2d(3, 32, 3, 1, 1),
-            #     nn.ReLU(),
-            #     nn.Conv2d(32, 32, 3, 2, 1),
-            #     nn.ReLU(),
-            #     nn.Conv2d(32, 32, 3, 1, 1),
-            #     nn.ReLU(),
-            #     nn.Conv2d(32, 32, 3, 1, 1),
-            #     nn.ReLU(),
-            #     nn.Conv2d(32, 32, 3, 2, 1),
-            #     nn.ReLU(),
-            #     nn.Conv2d(32, 32, 3, 1, 1),
-            #     nn.ReLU(),
-            #     nn.Conv2d(32, 32, 3, 2, 1),
-            #     nn.ReLU(),
-            #     nn.Flatten(),
-            #     nn.Linear(800, 5)).requires_grad_(True).to(DEVICE)
-
-        if NET == 'linear':
-
-            self.model = nn.Sequential(
-                nn.Flatten(),
-                nn.Linear(4800, 1200),
-                nn.ReLU(),
-                nn.Linear(1200, 200),
-                nn.ReLU(),
-                nn.Linear(200, 50),
-                nn.ReLU(),
-                nn.Linear(50, 5),
-            ).requires_grad_(True).to(DEVICE)
 
         self.optimizer = Adam(self.model.parameters(), lr=LEARNING_RATE)
         self.target_model = copy.deepcopy(self.model).requires_grad_(False).to(DEVICE)
@@ -145,7 +114,7 @@ class DQN(ScriptedAgent):
 
         for experience in sample:
 
-            state, action, next_state, done, distance_map, info = experience
+            state, action, next_state, done, info, distance_map, env = experience
 
             # Оставляем только действие одного агента
 
@@ -153,8 +122,8 @@ class DQN(ScriptedAgent):
             action = action[agent_id]
 
             # Считаем наблюдения из состояний
-            obs = compute_observation(state, agent_id, distance_map)
-            next_obs = compute_observation(next_state, agent_id, distance_map)
+            obs = compute_observation(agent_id, state, env, distance_map)
+            next_obs = compute_observation(agent_id, next_state, env, distance_map)
 
             # Считаем награду
             reward = reward_func(agent_id, state, next_state, info, distance_map)
@@ -202,7 +171,7 @@ class DQN(ScriptedAgent):
         # assign a values of network parameters via PyTorch methods.
         self.target_model = copy.deepcopy(self.model).requires_grad_(False).to(DEVICE)
     
-    def get_actions(self, observations, distance_map, team=0):
+    def get_actions(self, observations, team=0):
         
         actions = self.model(torch.Tensor(observations).to(DEVICE)).argmax(axis=1)
 
@@ -246,12 +215,12 @@ def evaluate_policy(agent, episodes=5):
 
             observations = []
             for agent_id in range(5):
-                obs = compute_observation(state, agent_id, distance_map)
+                obs = compute_observation(agent_id, state, env, distance_map)
                 observations.append(obs)
 
             observations = np.array(observations)
 
-            action = agent.get_actions(observations, distance_map, team=0)
+            action = agent.get_actions(observations, team=0)
 
             next_state, done, info = env.step(action)
             state = next_state
@@ -277,7 +246,7 @@ def main():
 
         action = [np.random.randint(5)] * 5
         next_state, done, info = env.step(action)
-        dqn.consume_transition((state, action, next_state, done, distance_map,info))
+        dqn.consume_transition((state, action, next_state, done, info, distance_map, copy.deepcopy(env)))
         
         if not done:
             state = next_state 
@@ -286,21 +255,24 @@ def main():
             distance_map = calc_distance_map(state)
 
     for i in tqdm(range(TRANSITIONS)):
-
+        # Cчитаем наблюдения
         observations = []
+
         for agent_id in range(5):
-            obs = compute_observation(state, agent_id, distance_map)
+            obs = compute_observation(agent_id, state, env, distance_map)
             observations.append(obs)
 
         observations = np.array(observations)
 
+        # epsilon greedy
         if random.random() < EPSILON:
             action = [np.random.randint(5)] * 5
         else:
-            action = dqn.get_actions(observations, distance_map)
+            action = dqn.get_actions(observations)
 
-        next_state, done, info = env.step(action)
-        dqn.update((state, action, next_state, done, distance_map,info))
+        # Делаем шаг и обновляем политику
+        next_state, done, next_info = env.step(action)
+        dqn.update((state, action, next_state, done, info, distance_map, copy.deepcopy(env)))
         
         if not done:
             state = next_state 

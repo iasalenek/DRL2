@@ -1,36 +1,98 @@
 import copy
 import numpy as np
 from my_utils.common_utils import calc_distance_map, calc_distance_mat
+from world.scripted_agents import BrokenClosestTargetAgent
 
 
-def compute_observation(state: np.ndarray,
-                        id: int,
+def next_bot_step(state, env, bot_team: int = 1):
+
+    new_position = np.zeros((40, 40), dtype=int)
+
+    realm = env.realm
+    world = realm.world
+
+    actions = realm.bots[bot_team].get_actions(state, bot_team)
+
+    for i in range(5):
+        ent = world.teams[bot_team][i]
+        act = actions[i]
+
+        _, _, tx, ty = world._action_coord_change(ent, act)
+
+        new_position[ty, tx] = 1
+
+    return new_position
+        
+
+def compute_observation(id: int,
+                        state: np.ndarray,
+                        env,
                         distance_map: np.ndarray,
-                        team: int = 0):
+                        agent_team: int = 0,
+                        bot_team: int = 1):
 
-    # preys_team = np.max(state[:, :, 0])
-
-    y, x = np.where((state[:, :, 0] == team) * (state[:, :, 1] == id))
+    y, x = np.where((state[:, :, 0] == agent_team) * (state[:, :, 1] == id))
     state_centred = np.roll(np.roll(state, 20 - y, axis=0), 20 - x, axis=1)
 
-    obs = np.zeros((40, 40, 5), dtype=int)
+    # obs = np.zeros((40, 40, 5), dtype=int)
 
     #Наблюдения из state
-
-    obs[:, :, 0][state_centred[:, :, 1] == -1] = 1 # Препятствия
-    obs[:, :, 1][state_centred[:, :, 0] == 2] = 1  # Жертвы
-    obs[:, :, 2][state_centred[:, :, 0] == 0] = 1  # Хищники
-    obs[:, :, 3][state_centred[:, :, 0] == 1] = 1  # Враги
+    tiles = (state_centred[:, :, 1] == -1).astype(int) # Препятствия
+    preys = (state_centred[:, :, 0] == 2).astype(int)  # Жертвы
+    agent_team = (state_centred[:, :, 0] == 0).astype(int)  # Хищники
+    bot_team_cur = (state_centred[:, :, 0] == 1).astype(int)  # Враги
 
     # Distance map для агента
-    distance_map = calc_distance_mat(distance_map, y, x)
-    obs[:, :, 4] = np.roll(np.roll(distance_map, 20 - y, axis=0), 20 - x, axis=1)# .clip(0, 100)
-    obs[:, :, 4][obs[:, :, 3] > 1600] = 0
+    distance_mat = calc_distance_mat(distance_map, y, x)
+    distance_mat_centered = np.roll(np.roll(distance_mat, 20 - y, axis=0), 20 - x, axis=1)
+
+    # Следующее состояние бота
+    bot_team_next = next_bot_step(state, env, bot_team)
+    bot_team_next_centered = np.roll(np.roll(bot_team_next, 20 - y, axis=0), 20 - x, axis=1)
+
+    # Собираем все наблюдения в одно
+    obs = np.dstack([
+        tiles,
+        preys,
+        agent_team,
+        bot_team_cur,
+        bot_team_next_centered,
+        distance_mat_centered
+    ])
 
     #Транспонируем наблюдения для сети
     obs = np.transpose(obs, (2, 0, 1))
 
     return obs
+
+
+# #### Test
+# import matplotlib.pyplot as plt
+
+# env = VersusBotEnv(Realm(
+#         MixedMapLoader((TwoTeamLabyrinthMapLoader(), TwoTeamRocksMapLoader())),
+#         2,
+#         bots={1: ClosestTargetAgent()}
+#     ))
+
+# state, info = env.reset()
+
+# done = False
+# while not done:
+#     next_state, done, info = env.step([0, 0, 0, 0, 0])
+#     if len(info['eaten']) > 0:
+#         break
+
+# info['eaten']
+
+# distance_map = calc_distance_map(state)
+
+# obs = compute_observation(0, state, env, distance_map)
+# obs[[3, 4]].shape
+# plt.imshow(obs[3] + 2 * obs[4])
+# plt.imshow(obs[5])
+# plt.show()
+# ####
 
 
 def calc_closeness_id(state: np.ndarray,
@@ -75,26 +137,36 @@ def closest_n_reward(id: int,
     dist = all_dist[all_dist < 1600]
 
     # n ближайших жертв
-    #ids_n = ids[np.argpartition(dist, min(n, len(dist) - 1))[:n]]
     ids_n = ids[np.argsort(dist)[:n]]
     dist_n = calc_closeness_id(state, distance_map, ids_n)
     cur_value = -np.mean(dist_n)
+
+    # Расстояние до ближайших жертв на следующем шаге
+    next_dist_n = calc_closeness_id(next_state, distance_map, ids_n)
+    next_dist_n = next_dist_n[next_dist_n < 1600]
+    next_value = -np.mean(next_dist_n)
 
     # Штраф за стояние на месте
     moves_id = np.sum(
         (state[:, :, 0] == 0) * (state[:, :, 1] == id) != 
         (next_state[:, :, 0] == 0) * (next_state[:, :, 1] == id)) // 2
 
-    eaten_id = np.sum([v[1] == id for k, v in info['eaten'].items()])
+    # Cъел или был съеден
+    eat = (0, id) in info['eaten'].values()
+    was_eaten = (0, id) in info['eaten'].keys()
 
-    next_dist_n = calc_closeness_id(next_state, distance_map, ids_n)
-    next_dist_n = next_dist_n[next_dist_n < 1600]
+    # Delta score
+    # delta_score = next_info['scores'][0] - info['scores'][0]
 
-
-    if len(next_dist_n) > 0:
-        next_value = -np.mean(next_dist_n)
-        reward = next_value - cur_value + 20 * eaten_id + 5 * moves_id
+    if not np.isnan(next_value):
+        reward = next_value - cur_value + 5 * moves_id + 20 * eat - 40 * was_eaten
     else:
-        reward = 20 * eaten_id + 5 * moves_id
+        reward = 5 * moves_id + 20 * eat - 40 * was_eaten
+
+    # ###
+    # import time
+    # print(reward)
+    # time.sleep(0.2)
+    # ###
 
     return reward
