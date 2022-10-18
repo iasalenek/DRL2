@@ -23,7 +23,8 @@ from torch.optim import Adam
 
 from my_utils.common_utils import calc_distance_map
 from my_utils.dqn_utils import (compute_observation,
-                                closest_n_reward)
+                                closest_n_reward,
+                                next_bot_step)
 
 import argparse
 parser = argparse.ArgumentParser()
@@ -114,7 +115,7 @@ class DQN(ScriptedAgent):
 
         for experience in sample:
 
-            state, action, next_state, done, info, distance_map, env = experience
+            state, bot_next, action, next_state, bot_next_next, done, info, distance_map = experience
 
             # Оставляем только действие одного агента
 
@@ -122,8 +123,8 @@ class DQN(ScriptedAgent):
             action = action[agent_id]
 
             # Считаем наблюдения из состояний
-            obs = compute_observation(agent_id, state, env, distance_map)
-            next_obs = compute_observation(agent_id, next_state, env, distance_map)
+            obs = compute_observation(agent_id, state, bot_next, distance_map)
+            next_obs = compute_observation(agent_id, next_state, bot_next_next, distance_map)
 
             # Считаем награду
             reward = reward_func(agent_id, state, next_state, info, distance_map)
@@ -208,6 +209,8 @@ def evaluate_policy(agent, episodes=5):
         done = False
         total_eaten = 0
         state, info = env.reset()
+        # Следующее действие бота в текущем состоянии
+        bot_next = next_bot_step(state, env)
         agent.reset(state, 0)
         distance_map = calc_distance_map(state)
         
@@ -215,7 +218,7 @@ def evaluate_policy(agent, episodes=5):
 
             observations = []
             for agent_id in range(5):
-                obs = compute_observation(agent_id, state, env, distance_map)
+                obs = compute_observation(agent_id, state, bot_next, distance_map)
                 observations.append(obs)
 
             observations = np.array(observations)
@@ -223,7 +226,10 @@ def evaluate_policy(agent, episodes=5):
             action = agent.get_actions(observations, team=0)
 
             next_state, done, info = env.step(action)
+            bot_next_next = next_bot_step(next_state, env)
+
             state = next_state
+            bot_next = bot_next_next
 
         scores_0.append(info['scores'][0])
         scores_1.append(info['scores'][1])
@@ -240,18 +246,24 @@ def main():
     ))
     dqn = DQN()
     state, info = env.reset()
+    # Следующее действие бота в текущем состоянии
+    bot_next = next_bot_step(state, env)
     distance_map = calc_distance_map(state)
 
     for _ in range(INITIAL_STEPS):
 
         action = [np.random.randint(5)] * 5
         next_state, done, info = env.step(action)
-        dqn.consume_transition((state, action, next_state, done, info, distance_map, copy.deepcopy(env)))
+        # Следующее действие бота в следующем состоянии
+        bot_next_next = next_bot_step(next_state, env)
+        dqn.consume_transition((state, bot_next, action, next_state, bot_next_next, done, info, distance_map))
         
         if not done:
-            state = next_state 
+            state = next_state
+            bot_next = bot_next_next
         else:
             state, info = env.reset()
+            bot_next = next_bot_step(state, env)
             distance_map = calc_distance_map(state)
 
     for i in tqdm(range(TRANSITIONS)):
@@ -259,7 +271,7 @@ def main():
         observations = []
 
         for agent_id in range(5):
-            obs = compute_observation(agent_id, state, env, distance_map)
+            obs = compute_observation(agent_id, state, bot_next, distance_map)
             observations.append(obs)
 
         observations = np.array(observations)
@@ -272,12 +284,16 @@ def main():
 
         # Делаем шаг и обновляем политику
         next_state, done, next_info = env.step(action)
-        dqn.update((state, action, next_state, done, info, distance_map, copy.deepcopy(env)))
+        # Следующее действие бота в следующем состоянии
+        bot_next_next = next_bot_step(next_state, env)
+        dqn.update((state, bot_next, action, next_state, bot_next_next, done, info, distance_map))
         
         if not done:
             state = next_state 
+            bot_next = next_bot_step(state, env)
         else:
             state, info = env.reset()
+            bot_next = next_bot_step(state, env)
             distance_map = calc_distance_map(state)
 
         if (i + 1) % (EVAL_EVERY) == 0:

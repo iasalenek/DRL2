@@ -26,7 +26,7 @@ def next_bot_step(state, env, bot_team: int = 1):
 
 def compute_observation(id: int,
                         state: np.ndarray,
-                        env,
+                        bot_next: np.ndarray,
                         distance_map: np.ndarray,
                         agent_team: int = 0,
                         bot_team: int = 1):
@@ -47,7 +47,7 @@ def compute_observation(id: int,
     distance_mat_centered = np.roll(np.roll(distance_mat, 20 - y, axis=0), 20 - x, axis=1)
 
     # Следующее состояние бота
-    bot_team_next = next_bot_step(state, env, bot_team)
+    bot_team_next = bot_next
     bot_team_next_centered = np.roll(np.roll(bot_team_next, 20 - y, axis=0), 20 - x, axis=1)
 
     # Собираем все наблюдения в одно
