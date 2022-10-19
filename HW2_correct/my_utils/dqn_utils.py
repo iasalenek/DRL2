@@ -26,7 +26,7 @@ def next_bot_step(state, env, bot_team: int = 1):
 
 def compute_observation(id: int,
                         state: np.ndarray,
-                        bot_next: np.ndarray,
+                        bots_next: np.ndarray,
                         distance_map: np.ndarray,
                         agent_team: int = 0,
                         bot_team: int = 1):
@@ -39,25 +39,24 @@ def compute_observation(id: int,
     #Наблюдения из state
     tiles = (state_centred[:, :, 1] == -1).astype(int) # Препятствия
     preys = (state_centred[:, :, 0] == 2).astype(int)  # Жертвы
-    agent_team = (state_centred[:, :, 0] == 0).astype(int)  # Хищники
-    bot_team_cur = (state_centred[:, :, 0] == 1).astype(int)  # Враги
+    agents = (state_centred[:, :, 0] == 0).astype(int)  # Хищники
+    bots_cur = (state_centred[:, :, 0] == 1).astype(int)  # Враги
 
     # Distance map для агента
     distance_mat = calc_distance_mat(distance_map, y, x)
-    distance_mat_centered = np.roll(np.roll(distance_mat, 20 - y, axis=0), 20 - x, axis=1)
+    distance_mat = np.roll(np.roll(distance_mat, 20 - y, axis=0), 20 - x, axis=1)
 
-    # Следующее состояние бота
-    bot_team_next = bot_next
-    bot_team_next_centered = np.roll(np.roll(bot_team_next, 20 - y, axis=0), 20 - x, axis=1)
+    # Центрируем следующее состояние бота
+    bots_next = np.roll(np.roll(bots_next, 20 - y, axis=0), 20 - x, axis=1)
 
     # Собираем все наблюдения в одно
     obs = np.dstack([
         tiles,
         preys,
-        agent_team,
-        bot_team_cur,
-        bot_team_next_centered,
-        distance_mat_centered
+        agents,
+        bots_cur,
+        bots_next,
+        distance_mat
     ])
 
     #Транспонируем наблюдения для сети
@@ -121,6 +120,15 @@ def calc_closeness_id(state: np.ndarray,
     return preys_dist
 
 
+def vs_bot_reward(id: int,
+                  state: np.ndarray,
+                  next_state: np.array,
+                  info,
+                  distance_map: np.ndarray,
+                  n: int = 5, debug=False):
+    pass
+
+
 def closest_n_reward(id: int,
                      state: np.ndarray,
                      next_state: np.array,
@@ -161,7 +169,7 @@ def closest_n_reward(id: int,
     if not np.isnan(next_value):
         reward = next_value - cur_value + 5 * moves_id + 20 * eat - 40 * was_eaten
     else:
-        reward = 5 * moves_id + 20 * eat - 40 * was_eaten
+        reward = 5 * moves_id + 20 * eat - 60 * was_eaten
 
     # ###
     # import time
