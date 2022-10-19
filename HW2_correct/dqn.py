@@ -85,7 +85,7 @@ class DQN(ScriptedAgent):
 
             self.model = nn.Sequential(
                 nn.Conv2d(6, 32, 3, 1, 1),
-                nn.BatchNorm2d(6),
+                nn.BatchNorm2d(32),
                 nn.ReLU(),
                 nn.Conv2d(32, 32, 3, 1, 1),
                 nn.BatchNorm2d(32),
