@@ -96,13 +96,19 @@ def compute_observation(id: int,
 
 def calc_closeness_id(state: np.ndarray,
                       distance_map: np.ndarray,
-                      ids: np.ndarray):
+                      ids: np.ndarray,
+                      agent_id: None,
+                      team: int=0):
 
     # Здесь команда охотников равна 0
 
     preys_team = np.max(state[:, :, 0])
     preys_ind = np.where(state[:, :, 0] == preys_team)
-    predators_ind = np.where(state[:, :, 0] == 0)
+    if agent_id is not None:
+        predators_ind = np.where(
+            (state[:, :, 0] == team) * (state[:, :, 1] == agent_id))
+    else:
+        predators_ind = np.where(state[:, :, 0] == team)
 
     preys_dist = np.ones_like(ids) * 1601
 
@@ -134,25 +140,38 @@ def closest_n_reward(id: int,
                      next_state: np.array,
                      info,
                      distance_map: np.ndarray,
-                     n: int = 5, debug=False):
+                     n: int = 1, debug=False):
 
-    # # Все 100 жертв
-    # all_ids = np.arange(100)
-    # all_dist = calc_closeness_id(state, distance_map, all_ids)
+    # Все 100 жертв
+    all_ids = np.arange(100)
+    all_dist = calc_closeness_id(state, distance_map, all_ids, id, team=0)
 
-    # # Только оставшиеся и достижимые жертвы
-    # ids = all_ids[all_dist < 1600]
-    # dist = all_dist[all_dist < 1600]
+    # Только оставшиеся и достижимые жертвы
+    ids = all_ids[all_dist < 1600]
+    dist = all_dist[all_dist < 1600]
 
-    # # n ближайших жертв
-    # ids_n = ids[np.argsort(dist)[:n]]
-    # dist_n = calc_closeness_id(state, distance_map, ids_n)
-    # cur_value = -np.mean(dist_n)
+    # Расстояния до этих жертв у бота
+    bot_dist = calc_closeness_id(state, distance_map, ids, None, team=1)
+    ids = ids[dist < bot_dist]
+    dist = dist[dist < bot_dist]
 
-    # # Расстояние до ближайших жертв на следующем шаге
-    # next_dist_n = calc_closeness_id(next_state, distance_map, ids_n)
-    # next_dist_n = next_dist_n[next_dist_n < 1600]
-    # next_value = -np.mean(next_dist_n)
+    closeness = 0
+
+    if len(dist) > 0:
+        
+
+        closest_id = np.array([ids[np.argmin(dist)]])
+        cur_closest_dist = np.min(dist)
+        next_closest_dist = calc_closeness_id(next_state, distance_map, closest_id, id, team=0)[0]
+
+        if not np.isnan(next_closest_dist) and next_closest_dist != 1601:
+            closeness = cur_closest_dist - next_closest_dist
+
+            # ###
+            # import time
+            # print(closeness)
+            # time.sleep(0.2)
+            # ###
 
     # Штраф за стояние на месте
     moves_id = np.sum(
@@ -166,17 +185,6 @@ def closest_n_reward(id: int,
     # Delta score
     # delta_score = next_info['scores'][0] - info['scores'][0]
 
-    reward = 5 * moves_id + 20 * eat - 60 * was_eaten
-
-    # if not np.isnan(next_value):
-    #     reward = next_value - cur_value + 5 * moves_id + 20 * eat - 40 * was_eaten
-    # else:
-    #     reward = 5 * moves_id + 20 * eat - 60 * was_eaten
-
-    # ###
-    # import time
-    # print(reward)
-    # time.sleep(0.2)
-    # ###
+    reward = 5 * closeness + 5 * moves_id + 20 * eat - 60 * was_eaten
 
     return reward

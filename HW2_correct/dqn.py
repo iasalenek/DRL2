@@ -128,19 +128,19 @@ class DQN(ScriptedAgent):
 
             next_obs = compute_observation(agent_id, next_state, bot_next_next, distance_map)
 
-            # ###
+            ###
             # import time
             # import matplotlib.pyplot as plt
-            # plt.imshow(obs[3])
+            # plt.imshow(obs[3], cmap='Greys')
             # plt.show()
             # time.sleep(5)
-            # plt.imshow(obs[4])
+            # plt.imshow(obs[4], cmap='Greys')
             # plt.show()
             # time.sleep(5)
             # plt.imshow(next_obs[3])
             # plt.show()
             # time.sleep(5)
-            # ###
+            ###
 
             # Считаем награду
             reward = reward_func(agent_id, state, next_state, info, distance_map)
