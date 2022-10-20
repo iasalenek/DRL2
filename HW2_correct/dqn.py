@@ -85,17 +85,13 @@ class DQN(ScriptedAgent):
 
             self.model = nn.Sequential(
                 nn.Conv2d(6, 32, 3, 1, 1),
-                nn.BatchNorm2d(32),
                 nn.ReLU(),
                 nn.Conv2d(32, 32, 3, 1, 1),
-                nn.BatchNorm2d(32),
                 nn.ReLU(),
                 nn.MaxPool2d(2, 2),
                 nn.Conv2d(32, 64, 3, 1, 1),
-                nn.BatchNorm2d(64),
                 nn.ReLU(),
                 nn.Conv2d(64, 64, 3, 1, 1),
-                nn.BatchNorm2d(64),
                 nn.ReLU(),
                 nn.MaxPool2d(2, 2),
                 nn.Flatten(),
@@ -126,9 +122,25 @@ class DQN(ScriptedAgent):
             agent_id = np.random.randint(5)
             action = action[agent_id]
 
+
             # Считаем наблюдения из состояний
             obs = compute_observation(agent_id, state, bot_next, distance_map)
+
             next_obs = compute_observation(agent_id, next_state, bot_next_next, distance_map)
+
+            # ###
+            # import time
+            # import matplotlib.pyplot as plt
+            # plt.imshow(obs[3])
+            # plt.show()
+            # time.sleep(5)
+            # plt.imshow(obs[4])
+            # plt.show()
+            # time.sleep(5)
+            # plt.imshow(next_obs[3])
+            # plt.show()
+            # time.sleep(5)
+            # ###
 
             # Считаем награду
             reward = reward_func(agent_id, state, next_state, info, distance_map)

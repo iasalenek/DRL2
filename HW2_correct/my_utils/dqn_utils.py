@@ -136,23 +136,23 @@ def closest_n_reward(id: int,
                      distance_map: np.ndarray,
                      n: int = 5, debug=False):
 
-    # Все 100 жертв
-    all_ids = np.arange(100)
-    all_dist = calc_closeness_id(state, distance_map, all_ids)
+    # # Все 100 жертв
+    # all_ids = np.arange(100)
+    # all_dist = calc_closeness_id(state, distance_map, all_ids)
 
-    # Только оставшиеся и достижимые жертвы
-    ids = all_ids[all_dist < 1600]
-    dist = all_dist[all_dist < 1600]
+    # # Только оставшиеся и достижимые жертвы
+    # ids = all_ids[all_dist < 1600]
+    # dist = all_dist[all_dist < 1600]
 
-    # n ближайших жертв
-    ids_n = ids[np.argsort(dist)[:n]]
-    dist_n = calc_closeness_id(state, distance_map, ids_n)
-    cur_value = -np.mean(dist_n)
+    # # n ближайших жертв
+    # ids_n = ids[np.argsort(dist)[:n]]
+    # dist_n = calc_closeness_id(state, distance_map, ids_n)
+    # cur_value = -np.mean(dist_n)
 
-    # Расстояние до ближайших жертв на следующем шаге
-    next_dist_n = calc_closeness_id(next_state, distance_map, ids_n)
-    next_dist_n = next_dist_n[next_dist_n < 1600]
-    next_value = -np.mean(next_dist_n)
+    # # Расстояние до ближайших жертв на следующем шаге
+    # next_dist_n = calc_closeness_id(next_state, distance_map, ids_n)
+    # next_dist_n = next_dist_n[next_dist_n < 1600]
+    # next_value = -np.mean(next_dist_n)
 
     # Штраф за стояние на месте
     moves_id = np.sum(
@@ -166,10 +166,12 @@ def closest_n_reward(id: int,
     # Delta score
     # delta_score = next_info['scores'][0] - info['scores'][0]
 
-    if not np.isnan(next_value):
-        reward = next_value - cur_value + 5 * moves_id + 20 * eat - 40 * was_eaten
-    else:
-        reward = 5 * moves_id + 20 * eat - 60 * was_eaten
+    reward = 5 * moves_id + 20 * eat - 60 * was_eaten
+
+    # if not np.isnan(next_value):
+    #     reward = next_value - cur_value + 5 * moves_id + 20 * eat - 40 * was_eaten
+    # else:
+    #     reward = 5 * moves_id + 20 * eat - 60 * was_eaten
 
     # ###
     # import time
