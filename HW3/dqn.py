@@ -24,6 +24,7 @@ from torch.optim import Adam
 
 from my_utils.common_utils import calc_distance_map
 from my_utils.dqn_utils import compute_observation, vs_agent_reward
+from nets import Slava_net
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--batch_size', type=int, default=16)
@@ -69,6 +70,7 @@ print(f'EVAL_EVERY: {EVAL_EVERY}')
 print(f'EPISODES: {EPISODES}')
 
 reward_func = vs_agent_reward
+model = Slava_net(5)
 
 class DQN(ScriptedAgent):
 
@@ -76,19 +78,7 @@ class DQN(ScriptedAgent):
         
         self.steps = 0
 
-        self.model = nn.Sequential(
-            nn.Conv2d(5, 32, 3, 1, 1),
-            nn.ReLU(),
-            nn.Conv2d(32, 32, 3, 1, 1),
-            nn.ReLU(),
-            nn.MaxPool2d(2, 2),
-            nn.Conv2d(32, 64, 3, 1, 1),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, 3, 1, 1),
-            nn.ReLU(),
-            nn.MaxPool2d(2, 2),
-            nn.Flatten(),
-            nn.Linear(6400, 5)).requires_grad_(True).to(DEVICE)
+        self.model = model.requires_grad_(True).to(DEVICE)
 
         self.optimizer = Adam(self.model.parameters(), lr=LEARNING_RATE)
         self.target_model = copy.deepcopy(self.model).requires_grad_(False).to(DEVICE)
