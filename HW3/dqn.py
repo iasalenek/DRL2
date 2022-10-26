@@ -254,7 +254,7 @@ def evaluate_policy(agent, enemy, episodes=5):
 
     agent.model.train()
         
-    return scores_0, scores_1
+    return np.array(scores_0), np.array(scores_1)
 
 
 def main():
