@@ -24,15 +24,15 @@ from torch.optim import Adam
 
 from my_utils.common_utils import calc_distance_map
 from my_utils.dqn_utils import compute_observation, vs_agent_reward
-from nets import Slava_net
+from nets import Slava_net, Slava_net_BN
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--batch_size', type=int, default=16)
 parser.add_argument('--lr', type=float, default=0.0005)
 parser.add_argument('--device', type=str, default='cpu')
-parser.add_argument('--transitions', type=int, default=50000)
+parser.add_argument('--transitions', type=int, default=100000)
 parser.add_argument('--buffer_size', type=int, default=10000)
-parser.add_argument('--initial_steps', type=int, default=10000)
+parser.add_argument('--initial_steps', type=int, default=1000)
 parser.add_argument('--step_per_update', type=int, default=4)
 parser.add_argument('--target_update', type=int, default=4000)
 parser.add_argument('--num_predators', type=int, default=5)
@@ -70,7 +70,7 @@ print(f'EVAL_EVERY: {EVAL_EVERY}')
 print(f'EPISODES: {EPISODES}')
 
 reward_func = vs_agent_reward
-model = Slava_net(5)
+model = Slava_net_BN(5)
 
 class DQN(ScriptedAgent):
 
