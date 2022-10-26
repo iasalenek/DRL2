@@ -127,19 +127,28 @@ class DQN(ScriptedAgent):
             obs = compute_observation(agent_id, state, distance_map)
             next_obs = compute_observation(agent_id, next_state, distance_map)
 
-            ###
+            # ##
             # import time
             # import matplotlib.pyplot as plt
+            # plt.imshow(obs[0], cmap='Greys')
+            # plt.show()
+            # time.sleep(5)
+            # plt.imshow(obs[1], cmap='Greys')
+            # plt.show()
+            # time.sleep(5)
+            # plt.imshow(obs[2], cmap='Greys')
+            # plt.show()
+            # time.sleep(5)
             # plt.imshow(obs[3], cmap='Greys')
             # plt.show()
             # time.sleep(5)
             # plt.imshow(obs[4], cmap='Greys')
             # plt.show()
             # time.sleep(5)
-            # plt.imshow(next_obs[3])
+            # plt.imshow(obs[5], cmap='Greys')
             # plt.show()
             # time.sleep(5)
-            ###
+            # ##
 
             # Считаем награду
             reward = reward_func(state, agent_id, next_state, info, distance_map)
@@ -199,7 +208,7 @@ class DQN(ScriptedAgent):
             self.steps += 1
 
     def save(self):
-        torch.save(self.model, "agent.pkl")
+       torch.save(self.model.state_dict(), 'agent.pth')
 
 
 def evaluate_policy(agent, enemy, episodes=5):

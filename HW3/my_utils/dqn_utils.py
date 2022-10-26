@@ -176,7 +176,13 @@ def vs_agent_reward(state: np.ndarray,
     reward = (10 * eat
              -10 * lost
              -20 * was_eaten
-             + 2 * closest_prey_distance_reduction
+             + 5 * closest_prey_distance_reduction
              + 1 * moved)
+
+    # ###
+    # import time
+    # print(reward)
+    # time.sleep(.2)
+    # ###
 
     return reward
