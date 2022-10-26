@@ -32,8 +32,11 @@ def compute_observation(id: int,
         distance_mat
     ])
 
-    #Транспонируем наблюдения для сети
+    # Транспонируем наблюдения для сети
     obs = np.transpose(obs, (2, 0, 1))
+
+    # Заменяем 0 на -1, чтобы считать свертки
+    obs[obs == 0] = -1
 
     return obs
 
@@ -130,7 +133,7 @@ def vs_agent_reward(state: np.ndarray,
                     distance_map: np.ndarray):
 
     eat = False  # жертву съел агент
-    loss = False # жертву съели перед агентом
+    lost = False # жертву съели перед агентом
     was_eaten = False # съели агента
     closest_prey_distance_reduction = 0 # снижение расстояния до ближайшей жертвы
     moved = False # агент сделал шаг
@@ -156,7 +159,7 @@ def vs_agent_reward(state: np.ndarray,
         # Съел агент
         eat = (0, agent_id) in info['eaten'].values()
         # Cъел не агент
-        loss = not eat
+        lost = not eat
     # Если ближайшую жертву не съели, то считаем снижение расстояния до нее
     else:
         closest_prey_distance_reduction = \
@@ -171,7 +174,7 @@ def vs_agent_reward(state: np.ndarray,
     was_eaten = (0, id) in info['eaten'].keys()
         
     reward = (10 * eat
-             -10 * loss
+             -10 * lost
              -20 * was_eaten
              + 2 * closest_prey_distance_reduction
              + 1 * moved)

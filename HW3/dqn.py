@@ -24,9 +24,15 @@ from torch.optim import Adam
 
 from my_utils.common_utils import calc_distance_map
 from my_utils.dqn_utils import compute_observation, vs_agent_reward
-from nets import Slava_net, Slava_net_BN
+from nets import Slava_net, Simple_conv
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--net', type=str, default='simple')
+parser.add_argument('--batch_norm', action='store_true')
+parser.add_argument('--no-batch_norm', dest='batch_norm', action='store_false')
+parser.set_defaults(batch_norm=False)
+parser.add_argument('--dropout', type=float, default=0.1)
+
 parser.add_argument('--batch_size', type=int, default=16)
 parser.add_argument('--lr', type=float, default=0.0005)
 parser.add_argument('--device', type=str, default='cpu')
@@ -42,6 +48,10 @@ parser.add_argument('--episodes', type=int, default=10)
 
 args = parser.parse_args()                       
 
+NET = args.net
+BATCH_NORM = args.batch_norm
+DROPOUT = args.dropout
+
 GAMMA = 0.99
 BATCH_SIZE = args.batch_size
 LEARNING_RATE = args.lr
@@ -55,6 +65,10 @@ NUM_PREDATORS = args.num_predators
 EPSILON = args.epsilon
 EVAL_EVERY = args.eval_every
 EPISODES = args.episodes
+
+print(f'NET: {NET}')
+print(f'BATCH_NORM: {BATCH_NORM}')
+print(f'DROPOUT: {DROPOUT}')
 
 print(f'BATCH_SIZE: {BATCH_SIZE}')
 print(f'LEARNING_RATE: {LEARNING_RATE}')
@@ -70,7 +84,11 @@ print(f'EVAL_EVERY: {EVAL_EVERY}')
 print(f'EPISODES: {EPISODES}')
 
 reward_func = vs_agent_reward
-model = Slava_net_BN(5)
+
+if NET == 'simple':
+    model = Simple_conv(5, batch_norm = BATCH_NORM, dropout=DROPOUT)
+elif NET == 'slava':
+    model = Slava_net(5, batch_norm = BATCH_NORM, dropout=DROPOUT)
 
 class DQN(ScriptedAgent):
 
@@ -227,7 +245,7 @@ def evaluate_policy(agent, enemy, episodes=5):
 
     agent.model.train()
         
-    return np.mean(scores_0), np.mean(scores_1)
+    return scores_0, scores_1
 
 
 def main():
@@ -304,8 +322,8 @@ def main():
             distance_map = calc_distance_map(state_0)
 
         if (i + 1) % (EVAL_EVERY) == 0:
-            score_0, score_1 = evaluate_policy(agent, enemy, EPISODES)
-            print(f"\nscore_0 mean: {np.mean(score_0)}, score_0 var: {np.var(score_0)}\nscore_1 mean: {np.mean(score_1)}, score_1 var: {np.var(score_1)}\nwinrate: {np.mean(score_0 > score_1)}")
+            scores_0, scores_1 = evaluate_policy(agent, enemy, EPISODES)
+            print(f"\nscore_0 mean: {np.mean(scores_0)}, score_0 var: {np.var(scores_0)}\nscore_1 mean: {np.mean(scores_1)}, score_1 var: {np.var(scores_1)}\nwinrate: {np.mean(scores_0 > scores_1)}")
             agent.save()
 
 
